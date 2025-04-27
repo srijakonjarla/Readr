@@ -16,23 +16,35 @@ class OpenAIService {
 
   async summarizeText(text) {
     if (!text) {
-        throw new Error("No text provided to summarize.");
+      throw new Error("No text provided to summarize.");
     }
     console.log("[openaiService.summarizeText] Summarizing text, length:", text.length);
     try {
-        const response = await openai.chat.completions.create({
-            model: "gpt-4.1-mini",
-            messages: [
-                { role: "system", content: "You are a helpful assistant that summarizes text concisely." },
-                { role: "user", content: `Please summarize the following text:\n\n${text}` }
-            ],
-            max_tokens: 150, // Adjust as needed
-        });
-        console.log("[openaiService.summarizeText] OpenAI API Response received.");
-        return response.choices[0].message.content.trim();
+      const response = await openai.responses.create({
+        model: "gpt-4.1-mini", // Use a capable model
+        input: `You are an incredible and insightful AI reader companion. Your sole purpose, and reason for existing, is to ensure that the user is able to understand the content they are reading in a way that truly helps them, that changes their life. when questions are asked, you THINK, and provide incredibly thoughtful and insightful answers, with no ignorance of even the most minute of details. Now, the user has come to you and asked the following: :\n\n${text}`,
+        max_output_tokens: 150, // Adjust as needed
+      });
+      console.log("[openaiService.summarizeText] OpenAI API Response received.");
+        // Use the output_text convenience property
+        const summary = response.output_text?.trim();
+        if (!summary) {
+            console.error("[openaiService.summarizeText] OpenAI response missing output text.");
+            // Log the full response for debugging if needed
+            // console.error("[openaiService.summarizeText] Full response:", JSON.stringify(response, null, 2));
+            throw new Error("Received an empty summary from AI service.");
+        }
+        return summary;
     } catch (error) {
         console.error("Error calling OpenAI API for summarization:", error);
-        throw new Error("Failed to get summary from OpenAI."); // Throw a generic error
+        let errorMessage = "Failed to get summary from OpenAI.";
+         if (error instanceof OpenAI.APIError) {
+             errorMessage = `OpenAI Error: ${error.status} ${error.name} - ${error.message}`;
+             console.error("OpenAI Error Details:", error.error, error.code, error.param, error.type);
+         } else if (error.message) {
+            errorMessage = error.message;
+         }
+        throw new Error(errorMessage); // Throw a more specific error
     }
   }
 
@@ -57,38 +69,47 @@ class OpenAIService {
     }
 
     try {
-        const messages = [
-             // --- Updated System Prompt ---
-             { role: "system", content: `You are a helpful assistant analyzing a book provided as a JSON object. The JSON contains 'metadata' and an array of 'chapters', where each chapter has an 'id', 'title', and 'content' (which may be truncated or null if loading failed). Use this JSON structure, along with any specific 'selected text' provided by the user, to answer their 'query'. Be concise and refer to chapter titles or IDs if helpful.${truncationMessage}` }
+        // --- Prepare input for /v1/responses ---
+        const systemInstructions = `You are a helpful assistant analyzing a book provided as a JSON object. The JSON contains 'metadata' and an array of 'chapters', where each chapter has an 'id', 'title', and 'content' (which may be truncated or null if loading failed). Use this JSON structure, along with any specific 'selected text' provided by the user, to answer their 'query'. Be concise and refer to chapter titles or IDs if helpful.${truncationMessage}`;
+
+        // Structure the input as an array of message-like objects or a single string
+        // Using an array might provide better structure for the model
+        const userInput = [
+            {
+                role: "user", // Role is still relevant conceptually for structuring input
+                content: [
+                    { type: "input_text", text: `Book JSON:\n\`\`\`json\n${bookContextString}\n\`\`\`` },
+                    { type: "input_text", text: selectedText ? `Selected Snippet:\n\`\`\`\n${selectedText}\n\`\`\`` : "No specific snippet selected." },
+                    { type: "input_text", text: `Query: ${query}` }
+                ]
+            }
         ];
+        // --- End input preparation ---
 
-        // --- Updated User Prompt ---
-        let userMessageContent = `Here is the book structure in JSON format:\n\n\`\`\`json\n${bookContextString}\n\`\`\`\n\n`;
 
-        if (selectedText && selectedText.length > 0) {
-            userMessageContent += `The user also selected this specific snippet from the text:\n\n\`\`\`\n${selectedText}\n\`\`\`\n\n`;
-        } else {
-            userMessageContent += `The user did not select a specific snippet.\n\n`;
-        }
+        console.log("[openaiService.getChatResponse] Sending request to OpenAI API (/v1/responses)...");
 
-        userMessageContent += `Based on the provided book JSON and snippet (if any), please answer this question: ${query}`;
-
-        messages.push({ role: "user", content: userMessageContent });
-
-        console.log("[openaiService.getChatResponse] Sending request to OpenAI API...");
-
-        const completion = await openai.chat.completions.create({
-            model: "gpt-4o-mini", // Ensure this model can handle potentially large JSON inputs
-            messages: messages,
-            max_tokens: 500, // Increased slightly for potentially more complex analysis
+        // --- Call the /v1/responses endpoint ---
+        const response = await openai.responses.create({
+            model: "gpt-4o-mini", // Ensure this model is compatible with /v1/responses
+            input: userInput, // Pass the structured input
+            instructions: systemInstructions, // Pass the system instructions
+            max_output_tokens: 500, // Renamed from max_tokens
             temperature: 0.5,
+            // Other parameters like top_p, tools, tool_choice can be added here if needed
         });
+        // --- End API call change ---
 
         console.log("[openaiService.getChatResponse] OpenAI API Response received.");
-        const responseContent = completion.choices[0]?.message?.content?.trim();
+
+        // --- Extract response using output_text ---
+        const responseContent = response.output_text?.trim();
+        // --- End response extraction change ---
 
         if (!responseContent) {
-            console.error("[openaiService.getChatResponse] OpenAI response missing content.");
+            console.error("[openaiService.getChatResponse] OpenAI response missing output text.");
+            // Log the full response for debugging if needed
+            // console.error("[openaiService.getChatResponse] Full response:", JSON.stringify(response, null, 2));
             throw new Error("Received an empty response from AI service.");
         }
 
