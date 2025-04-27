@@ -1,4 +1,5 @@
-const fs = require('fs');
+const fs = require('fs').promises;
+const fsSync = require('fs');
 const path = require('path');
 const EPub = require('epub');
 
@@ -24,7 +25,7 @@ exports.getFile = async (req, res) => {
     console.log(`[getFile] Requested file info for: ${filename}`);
     const filePath = path.join(__dirname, '../../uploads', filename);
 
-    if (!fs.existsSync(filePath)) {
+    if (!fsSync.existsSync(filePath)) {
       console.error(`[getFile] File not found: ${filePath}`);
       return res.status(404).json({ error: 'File not found' });
     }
@@ -105,7 +106,7 @@ exports.getEpubChapter = async (req, res) => {
     console.log(`[getEpubChapter] Requested chapter: ID=${chapterId}, File=${filename}`);
     const filePath = path.join(__dirname, '../../uploads', filename);
     
-    if (!fs.existsSync(filePath)) {
+    if (!fsSync.existsSync(filePath)) {
       console.error(`[getEpubChapter] File not found: ${filePath}`);
       return res.status(404).json({ error: 'File not found' });
     }
@@ -151,6 +152,97 @@ exports.getEpubChapter = async (req, res) => {
     if (!res.headersSent) {
         res.status(500).json({ error: 'Failed to retrieve chapter due to server error' });
     }
+  }
+};
+
+// Helper function to safely parse metadata for a single EPUB
+const getEpubMetadata = (filePath, filename) => {
+  return new Promise((resolve) => {
+    // Check existence synchronously before creating EPub instance
+    if (!fsSync.existsSync(filePath)) {
+        console.warn(`[getEpubMetadata] File disappeared before parsing: ${filename}`);
+        return resolve(null); // File doesn't exist or was removed
+    }
+
+    const epub = new EPub(filePath);
+    let resolved = false; // Flag to prevent multiple resolves
+
+    epub.on('error', (error) => {
+      if (resolved) return;
+      resolved = true;
+      console.error(`[getEpubMetadata] Error parsing metadata for ${filename}:`, error.message);
+      resolve(null); // Return null on error for this specific file
+    });
+
+    epub.on('end', () => {
+      if (resolved) return;
+      resolved = true;
+      console.log(`[getEpubMetadata] Successfully parsed metadata for ${filename}`);
+      resolve({
+        filename: filename,
+        metadata: epub.metadata || { title: filename } // Provide fallback title
+      });
+    });
+
+    // Add a timeout in case parsing hangs indefinitely
+    const timeoutId = setTimeout(() => {
+        if (resolved) return;
+        resolved = true;
+        console.warn(`[getEpubMetadata] Parsing timed out for ${filename}`);
+        resolve(null);
+    }, 10000); // 10 second timeout
+
+    try {
+        console.log(`[getEpubMetadata] Starting parse for ${filename}`);
+        epub.parse();
+    } catch (parseError) {
+        if (resolved) return;
+        resolved = true;
+        console.error(`[getEpubMetadata] Caught synchronous error during parse init for ${filename}:`, parseError.message);
+        clearTimeout(timeoutId); // Clear timeout if sync error occurs
+        resolve(null);
+    }
+  });
+};
+
+exports.getBooks = async (req, res) => {
+  const uploadsDir = path.join(__dirname, '../../uploads');
+  console.log(`[getBooks] Reading directory: ${uploadsDir}`);
+
+  try {
+    const files = await fs.readdir(uploadsDir);
+    const epubFiles = files.filter(file => file.toLowerCase().endsWith('.epub'));
+    console.log(`[getBooks] Found EPUB files:`, epubFiles);
+
+    if (epubFiles.length === 0) {
+      console.log(`[getBooks] No EPUB files found.`);
+      return res.json([]); // Return empty array if no epubs
+    }
+
+    // Process files concurrently
+    const bookPromises = epubFiles.map(filename => {
+      const filePath = path.join(uploadsDir, filename);
+      return getEpubMetadata(filePath, filename);
+    });
+
+    const booksData = await Promise.all(bookPromises);
+
+    // Filter out any null results from failed parses/timeouts
+    const validBooksData = booksData.filter(book => book !== null);
+
+    console.log(`[getBooks] Returning metadata for ${validBooksData.length} books.`);
+    res.json(validBooksData);
+
+  } catch (error) {
+    // Handle directory reading errors (e.g., directory doesn't exist)
+    if (error.code === 'ENOENT') {
+        console.warn(`[getBooks] Uploads directory not found: ${uploadsDir}. Returning empty list.`);
+        // If the directory doesn't exist, it's expected on first run, return empty array
+        return res.json([]);
+    }
+    // Handle other potential errors during directory read or processing
+    console.error('[getBooks] Error listing books:', error);
+    res.status(500).json({ error: 'Failed to list books' });
   }
 };
 

@@ -24,6 +24,9 @@ router.post('/upload', upload.single('file'), fileController.uploadFile);
 router.get('/files/:filename', fileController.getFile);
 router.get('/epub/:filename/chapter/:chapterId', fileController.getEpubChapter);
 
+// Add route to list available books
+router.get('/books', fileController.getBooks);
+
 // Temporarily disable the resource route causing the error
 // router.get('/epub/:filename/resource/*', fileController.getEpubResource);
 
