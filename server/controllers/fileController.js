@@ -1,12 +1,9 @@
-// --- Add these requires back at the top ---
 const fs = require('fs').promises;
 const fsSync = require('fs');
 const path = require('path');
 const EPub = require('epub');
-const openaiService = require('../services/openaiService'); // This should already be there
-// --- End requires ---
+const openaiService = require('../services/openaiService'); 
 
-// --- Add these exported functions back ---
 
 exports.uploadFile = async (req, res) => {
   try {
@@ -48,9 +45,6 @@ exports.getFile = async (req, res) => {
 
       epub.on('end', () => {
         console.log(`[getFile] EPUB parsing finished for ${filename}.`);
-        // console.log(`[getFile] Raw epub.toc for ${filename}:`, JSON.stringify(epub.toc, null, 2));
-        // console.log(`[getFile] Raw epub.flow for ${filename}:`, JSON.stringify(epub.flow, null, 2));
-
         let toc = [];
         const chapterSource = epub.flow && epub.flow.length > 0 ? epub.flow : epub.toc; // Prefer flow, fallback to toc
 
@@ -64,10 +58,6 @@ exports.getFile = async (req, res) => {
         } else {
             console.warn(`[getFile] Both epub.flow and epub.toc are empty or missing for ${filename}. No chapters can be listed.`);
         }
-
-
-        // console.log(`[getFile] Final mapped toc for ${filename}:`, JSON.stringify(toc, null, 2));
-        // console.log(`[getFile] Metadata for ${filename}:`, JSON.stringify(epub.metadata, null, 2));
 
         if (!toc || toc.length === 0) {
             console.warn(`[getFile] Warning: Final TOC is empty for ${filename}. Sending response without chapters.`);
@@ -89,10 +79,7 @@ exports.getFile = async (req, res) => {
 
     } else {
       console.log(`[getFile] File is not EPUB, sending raw file: ${filename}`);
-      // For non-EPUBs, maybe just send metadata? Or decide on behavior.
-      // For now, let's prevent sending raw files directly.
       return res.status(400).json({ error: 'Requested file is not an EPUB.' });
-      // return res.sendFile(filePath); // Avoid sending arbitrary files
     }
   } catch (error) {
     console.error('[getFile] General error:', error);
@@ -245,9 +232,7 @@ exports.getBooks = async (req, res) => {
   }
 };
 
-// --- End added functions ---
 
-// Limit characters per chapter to keep JSON size manageable
 const MAX_CHARS_PER_CHAPTER_JSON = 5000;
 
 const loadBookJsonStructure = (filePath) => {
@@ -326,20 +311,13 @@ const loadBookJsonStructure = (filePath) => {
                     console.log(`[loadBookJsonStructure] Finished processing ${chaptersData.length} chapters for JSON structure.`);
                     resolve(bookJson);
                 })
-                // This catch shouldn't be needed if individual promises don't reject
-                // .catch(error => {
-                //      console.error("[loadBookJsonStructure] Unexpected error during Promise.all for chapters:", error);
-                //      reject(new Error("Failed to process all book chapters for JSON."));
-                // });
         });
 
         console.log(`[loadBookJsonStructure] Starting EPUB parse...`);
         epub.parse();
     });
 };
-// --- End Helper Function ---
 
-// Modified handler for chat queries
 exports.handleChatQuery = async (req, res) => {
     const { query, context, filename } = req.body; // context is selectedText
     console.log(`[handleChatQuery] Received query: "${query}"`);

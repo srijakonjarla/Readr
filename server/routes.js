@@ -7,41 +7,34 @@ const openaiService = require('./services/openaiService');
 
 const router = express.Router();
 
-// Configure multer for file uploads
+// TODO: use a real cloud database for this
 const storage = multer.diskStorage({
-  destination: function(req, file, cb) {
+  destination: function (req, file, cb) {
     cb(null, path.join(__dirname, '../uploads'));
   },
-  filename: function(req, file, cb) {
+  filename: function (req, file, cb) {
     cb(null, Date.now() + '-' + file.originalname);
   }
 });
 
 const upload = multer({ storage: storage });
 
-// SEtup API routes from nodejs exports, these will be called by the served frontend
+// API routes served by the nodejs server
 router.post('/upload', upload.single('file'), fileController.uploadFile);
 router.get('/files/:filename', fileController.getFile);
 router.get('/epub/:filename/chapter/:chapterId', fileController.getEpubChapter);
-
-// Add route to list available books
 router.get('/books', fileController.getBooks);
-
-// Temporarily disable the resource route causing the error
-// router.get('/epub/:filename/resource/*', fileController.getEpubResource);
-
-// Add route for chat queries
 router.post('/chat', fileController.handleChatQuery);
 
 // OpenAI routes
 router.post('/summarize', async (req, res) => {
   try {
     const { text } = req.body;
-    
+
     if (!text) {
       return res.status(400).json({ error: 'No text provided' });
     }
-    
+
     const summary = await openaiService.summarizeText(text);
     return res.status(200).json({ summary });
   } catch (error) {
