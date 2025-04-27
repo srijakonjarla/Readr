@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EPUB Reader</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .upload-section {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .reader-section {
+            display: flex;
+            gap: 20px;
+        }
+        .toc {
+            flex: 0 0 250px;
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .content {
+            flex: 1;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        input[type="file"] {
+            margin-bottom: 10px;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+        li:hover {
+            color: #4CAF50;
+        }
+        .metadata {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>EPUB Reader</h1>
+    
+    <div class="container">
+        <div class="upload-section">
+            <h2>Upload EPUB</h2>
+            <input type="file" id="fileInput" accept=".epub">
+            <button id="uploadBtn">Upload</button>
+        </div>
+        
+        <div class="reader-section hidden" id="readerSection">
+            <div class="toc">
+                <div class="metadata" id="metadata"></div>
+                <h3>Table of Contents</h3>
+                <ul id="tocList"></ul>
+            </div>
+            <div class="content" id="content"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const uploadBtn = document.getElementById('uploadBtn');
+            const fileInput = document.getElementById('fileInput');
+            const readerSection = document.getElementById('readerSection');
+            const metadataSection = document.getElementById('metadata');
+            const tocList = document.getElementById('tocList');
+            const contentDiv = document.getElementById('content');
+            
+            let currentFilename = null;
+            
+            uploadBtn.addEventListener('click', () => {
+                const file = fileInput.files[0];
+                if (!file) {
+                    alert('Please select a file first');
+                    return;
+                }
+                
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.file) {
+                        loadEpub(data.file);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error uploading file:', error);
+                    alert('Error uploading file');
+                });
+            });
+            
+            function loadEpub(filename) {
+                currentFilename = filename;
+                
+                fetch(`/api/files/${filename}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Display metadata
+                    const metadata = data.metadata;
+                    metadataSection.innerHTML = `
+                        <h3>${metadata.title || 'Unknown Title'}</h3>
+                        <p><strong>Author:</strong> ${metadata.creator || 'Unknown Author'}</p>
+                        <p><strong>Publisher:</strong> ${metadata.publisher || 'Unknown Publisher'}</p>
+                    `;
+                    
+                    // Display table of contents
+                    tocList.innerHTML = '';
+                    data.toc.forEach(item => {
+                        const li = document.createElement('li');
+                        li.textContent = item.title;
+                        li.addEventListener('click', () => {
+                            loadChapter(item.id);
+                        });
+                        tocList.appendChild(li);
+                    });
+                    
+                    // Show reader section
+                    readerSection.classList.remove('hidden');
+                    
+                    // Load first chapter if available
+                    if (data.toc.length > 0) {
+                        loadChapter(data.toc[0].id);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading EPUB:', error);
+                    alert('Error loading EPUB file');
+                });
+            }
+            
+            function loadChapter(chapterId) {
+                fetch(`/api/epub/${currentFilename}/chapter/${chapterId}`)
+                .then(response => response.text())
+                .then(html => {
+                    contentDiv.innerHTML = html;
+                    
+                    // Fix relative image paths
+                    const images = contentDiv.querySelectorAll('img');
+                    images.forEach(img => {
+                        if (img.src.startsWith('file://')) {
+                            // This is a workaround for local file references in EPUBs
+                            // Not ideal, but allows us to see that images should be here
+                            img.style.border = '1px dashed #ccc';
+                            img.style.padding = '10px';
+                            img.style.display = 'block';
+                            img.style.margin = '10px auto';
+                            img.style.maxWidth = '80%';
+                            img.alt = 'Image cannot be displayed (EPUB internal reference)';
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading chapter:', error);
+                    contentDiv.innerHTML = '<p>Error loading chapter content</p>';
+                });
+            }
+        });
+    </script>
+</body>
+</html>
