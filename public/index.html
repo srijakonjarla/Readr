@@ -204,6 +204,88 @@
         .dark-mode .library-upload-controls {
              border-top-color: #444;
         }
+
+        /* Chat Interface Styles */
+        .chat-interface {
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px; /* Space below progress bar */
+            margin-bottom: 10px; /* Space above content */
+            transition: background-color 0.3s;
+        }
+        .dark-mode .chat-interface {
+            background-color: #2a2a2a;
+        }
+        .chat-interface h4 {
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        .selected-text-preview {
+            background-color: #e9e9e9;
+            border: 1px solid #ccc;
+            padding: 5px 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            max-height: 100px;
+            overflow-y: auto;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        .dark-mode .selected-text-preview {
+            background-color: #444;
+            border-color: #555;
+        }
+        .selected-text-preview p {
+            margin: 0;
+            font-style: italic;
+            color: #555;
+        }
+        .dark-mode .selected-text-preview p {
+            color: #bbb;
+        }
+        .selected-text-preview blockquote { /* Style selected text */
+             margin: 0;
+             padding: 0;
+             font-style: normal;
+             color: #333;
+             white-space: pre-wrap; /* Preserve whitespace */
+             word-wrap: break-word; /* Break long words */
+        }
+        .dark-mode .selected-text-preview blockquote {
+            color: #eee;
+        }
+        #chatQueryInput {
+            width: calc(100% - 22px); /* Account for padding/border */
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            font-family: inherit;
+            font-size: 1em;
+            resize: vertical; /* Allow vertical resize */
+            transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+        }
+        .dark-mode #chatQueryInput {
+            background-color: #555;
+            color: #eee;
+            border-color: #666;
+        }
+        #submitChatQueryBtn {
+            display: block; /* Make button take full width */
+            width: 100%;
+        }
+        .chat-response {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #e9e9e9;
+            border-radius: 4px;
+            min-height: 30px; /* Ensure it's visible even when empty */
+            transition: background-color 0.3s;
+        }
+        .dark-mode .chat-response {
+            background-color: #444;
+        }
     </style>
 </head>
 <body>
@@ -264,11 +346,26 @@
                     </div>
                     <button id="nextChapter" disabled>Next &gt;</button>
                 </div>
-                <div class="content" id="content">
-                    {/* Chapter content will be loaded here */}
-                </div>
                 <div class="progress-bar">
                     <div class="progress-indicator" id="progressIndicator"></div>
+                </div>
+
+                <!-- Add Chat Interface Section -->
+                <div class="chat-interface" id="chatInterface">
+                    <h4>Ask about the text:</h4>
+                    <div id="selectedTextDisplay" class="selected-text-preview">
+                        <p><i>Select text in the chapter above to provide context...</i></p>
+                    </div>
+                    <textarea id="chatQueryInput" rows="3" placeholder="Enter your question here..."></textarea>
+                    <button id="submitChatQueryBtn">Ask AI</button>
+                    <div id="chatResponseOutput" class="chat-response">
+                        {/* AI responses will appear here later */}
+                    </div>
+                </div>
+                <!-- End Chat Interface Section -->
+
+                <div class="content" id="content">
+                    {/* Chapter content will be loaded here */}
                 </div>
             </div>
         </div>
@@ -302,6 +399,11 @@
             const librarySection = document.getElementById('librarySection'); // Library section
             const bookList = document.getElementById('bookList');             // Book list ul
             const libraryMessage = document.getElementById('libraryMessage'); // Message p in library
+            const chatInterface = document.getElementById('chatInterface'); // Chat container
+            const selectedTextDisplay = document.getElementById('selectedTextDisplay'); // Div to show selection
+            const chatQueryInput = document.getElementById('chatQueryInput'); // Query input textarea
+            const submitChatQueryBtn = document.getElementById('submitChatQueryBtn'); // Submit button
+            const chatResponseOutput = document.getElementById('chatResponseOutput'); // Response display area
 
             // State variables
             let currentFilename = null;
@@ -309,6 +411,7 @@
             let currentMetadata = {};
             let currentChapterIndex = -1; // Start at -1 to indicate no chapter loaded initially
             let fontSize = 100; // Base font size percentage
+            let currentSelectedText = ""; // Variable to store selection
 
             // --- Check if elements exist ---
             console.log("Checking element references:");
@@ -328,6 +431,11 @@
             console.log("  librarySection:", librarySection ? 'Found' : 'MISSING!');
             console.log("  bookList:", bookList ? 'Found' : 'MISSING!');
             console.log("  libraryMessage:", libraryMessage ? 'Found' : 'MISSING!');
+            console.log("  chatInterface:", chatInterface ? 'Found' : 'MISSING!');
+            console.log("  selectedTextDisplay:", selectedTextDisplay ? 'Found' : 'MISSING!');
+            console.log("  chatQueryInput:", chatQueryInput ? 'Found' : 'MISSING!');
+            console.log("  submitChatQueryBtn:", submitChatQueryBtn ? 'Found' : 'MISSING!');
+            console.log("  chatResponseOutput:", chatResponseOutput ? 'Found' : 'MISSING!');
             // --- End Check ---
 
             // --- Event Listeners ---
@@ -361,6 +469,8 @@
 
             if (contentDiv) {
                 contentDiv.addEventListener('scroll', updateReadingProgress);
+                contentDiv.addEventListener('mouseup', handleTextSelection);
+                contentDiv.addEventListener('keyup', handleTextSelection); // Handle keyboard selection
             }
             if (prevChapterBtn) {
                 prevChapterBtn.addEventListener('click', navigateToPrevChapter);
@@ -378,8 +488,15 @@
                 toggleThemeBtn.addEventListener('click', toggleTheme);
             }
 
+            // Listener for the chat query submit button
+            if (submitChatQueryBtn) {
+                submitChatQueryBtn.addEventListener('click', handleChatQuerySubmit);
+            } else {
+                console.error("Chat query submit button not found!");
+            }
+
             // --- Initial Setup ---
-            loadExistingBooks(); // Load books on page load
+            loadExistingBooks();
 
             // --- Functions ---
 
@@ -596,6 +713,14 @@
                     contentDiv.innerHTML = '<p>No chapters found in this EPUB.</p>';
                     updateNavigationButtons();
                 }
+
+                // Show the chat interface when the reader opens
+                if (chatInterface) chatInterface.classList.remove('hidden');
+                // Reset selection display
+                handleTextSelection();
+                // Clear query input and response
+                if(chatQueryInput) chatQueryInput.value = '';
+                if(chatResponseOutput) chatResponseOutput.innerHTML = '';
             }
 
             function resetReaderUI() {
@@ -627,6 +752,9 @@
                 // Reset file input values so the same file can be re-uploaded if needed
                 if (fileInput) fileInput.value = '';
                 if (fileInputLibrary) fileInputLibrary.value = '';
+
+                // Hide chat interface on reset
+                if (chatInterface) chatInterface.classList.add('hidden');
             }
 
             function loadChapterByIndex(index) {
@@ -756,6 +884,81 @@
                         item.style.fontWeight = 'normal';
                         item.style.color = ''; // Reset to default CSS color
                     }
+                });
+            }
+
+            function handleTextSelection() {
+                const selection = window.getSelection();
+                currentSelectedText = selection.toString().trim();
+
+                if (currentSelectedText) {
+                    // Display the selected text in the preview area, wrapping it for clarity
+                    selectedTextDisplay.innerHTML = `<blockquote>${currentSelectedText}</blockquote>`;
+                } else {
+                    // Show placeholder if nothing is selected
+                    selectedTextDisplay.innerHTML = `<p><i>Select text in the chapter above to provide context...</i></p>`;
+                }
+                console.log("Selected Text:", currentSelectedText || "(none)");
+            }
+
+            function handleChatQuerySubmit() {
+                const query = chatQueryInput.value.trim();
+                const context = currentSelectedText; // Use the stored selection
+
+                if (!query) {
+                    alert("Please enter a question.");
+                    return;
+                }
+                if (!currentFilename) {
+                    alert("No book is currently loaded. Cannot process chat query.");
+                    console.error("[handleChatQuerySubmit] currentFilename is missing.");
+                    return;
+                }
+
+                console.log("[handleChatQuerySubmit] Sending query:", query);
+                console.log("[handleChatQuerySubmit] With context:", context || "(none)");
+                console.log("[handleChatQuerySubmit] For book:", currentFilename);
+
+                // Clear previous response and show loading indicator (optional)
+                chatResponseOutput.innerHTML = "<p><i>Asking AI... (processing book structure)</i></p>";
+                submitChatQueryBtn.disabled = true; // Disable button during request
+
+                // Make API call to the backend
+                fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: query,
+                        context: context, // Send selected text as context
+                        filename: currentFilename // <-- Make sure this line exists
+                    }),
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        // Try to get error message from backend
+                        return response.json().then(err => {
+                             throw new Error(err.error || `HTTP error! status: ${response.status}`);
+                        }).catch(() => {
+                            // Fallback if response is not JSON or has no error field
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log("[handleChatQuerySubmit] Received response from backend:", data);
+                    // Display the actual response
+                    chatResponseOutput.innerHTML = `<p>${data.response.replace(/\n/g, '<br>')}</p>`; // Display formatted response
+                    // chatQueryInput.value = ''; // Optionally clear input after submit
+                })
+                .catch(error => {
+                    console.error('[handleChatQuerySubmit] Error:', error);
+                    chatResponseOutput.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+                })
+                .finally(() => {
+                    submitChatQueryBtn.disabled = false; // Re-enable button
                 });
             }
         });

@@ -30,6 +30,9 @@ router.get('/books', fileController.getBooks);
 // Temporarily disable the resource route causing the error
 // router.get('/epub/:filename/resource/*', fileController.getEpubResource);
 
+// Add route for chat queries
+router.post('/chat', fileController.handleChatQuery);
+
 // OpenAI routes
 router.post('/summarize', async (req, res) => {
   try {
