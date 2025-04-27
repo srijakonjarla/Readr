@@ -12,6 +12,7 @@
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
+            transition: background-color 0.3s, color 0.3s; /* Smooth theme transition */
         }
         h1 {
             text-align: center;
@@ -27,6 +28,7 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: background-color 0.3s, box-shadow 0.3s;
         }
         .reader-section {
             display: flex;
@@ -40,15 +42,23 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             max-height: 80vh;
             overflow-y: auto;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        .content-wrapper { /* Added wrapper for controls + content */
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0; /* Prevent flex item overflow */
         }
         .content {
-            flex: 1;
+            flex: 1; /* Allow content to grow and shrink */
             padding: 20px;
             background-color: #fff;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            max-height: 80vh;
+            max-height: calc(80vh - 60px); /* Adjust height considering controls */
             overflow-y: auto;
+            transition: background-color 0.3s, box-shadow 0.3s, font-size 0.3s;
         }
         button {
             padding: 8px 16px;
@@ -58,9 +68,14 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
+            transition: background-color 0.2s;
         }
         button:hover {
             background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
         }
         input[type="file"] {
             margin-bottom: 10px;
@@ -73,6 +88,7 @@
             padding: 8px 0;
             border-bottom: 1px solid #eee;
             cursor: pointer;
+            transition: color 0.2s, border-bottom-color 0.3s;
         }
         li:hover {
             color: #4CAF50;
@@ -81,132 +97,519 @@
             margin-bottom: 15px;
             padding-bottom: 15px;
             border-bottom: 1px solid #eee;
+            transition: border-bottom-color 0.3s;
         }
         .hidden {
             display: none;
         }
+
+        /* Navigation controls for reader */
+        .reader-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center; /* Vertically align items */
+            padding: 10px 0;
+            margin-bottom: 10px; /* Reduced margin */
+            border-bottom: 1px solid #eee;
+            transition: border-bottom-color 0.3s;
+        }
+
+        .nav-buttons,
+        .settings-buttons {
+            display: flex;
+            gap: 10px;
+            align-items: center; /* Align buttons */
+        }
+
+        .font-size-control {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* Dark mode support */
+        .dark-mode {
+            background-color: #222;
+            color: #eee;
+        }
+
+        .dark-mode .upload-section,
+        .dark-mode .toc,
+        .dark-mode .content {
+            background-color: #333;
+            color: #eee;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .dark-mode li,
+        .dark-mode .metadata,
+        .dark-mode .reader-controls {
+            border-bottom-color: #444;
+        }
+
+        .dark-mode li:hover {
+            color: #7FFF7F; /* Lighter green for dark mode */
+        }
+
+        .dark-mode button {
+            background-color: #5a5a5a;
+        }
+        .dark-mode button:hover {
+            background-color: #6a6a6a;
+        }
+        .dark-mode button:disabled {
+            background-color: #444;
+        }
+
+        /* Progress indicator */
+        .progress-bar {
+            height: 5px;
+            background-color: #ddd;
+            border-radius: 2px;
+            margin-top: 10px; /* Add space above progress bar */
+            transition: background-color 0.3s;
+        }
+
+        .progress-indicator {
+            height: 100%;
+            background-color: #4CAF50;
+            border-radius: 2px;
+            width: 0%;
+            transition: width 0.1s linear, background-color 0.3s; /* Smooth progress update */
+        }
+
+        .dark-mode .progress-bar {
+            background-color: #444;
+        }
+        .dark-mode .progress-indicator {
+            background-color: #7FFF7F;
+        }
+
+        /* Style for the metadata preview area */
+        .metadata-preview {
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border: 1px solid #ddd;
+        }
+        .dark-mode .metadata-preview {
+             background-color: #2a2a2a;
+             border-color: #444;
+        }
+
+        /* Center the open book button */
+        .open-book-controls {
+            text-align: center;
+            margin-top: 15px;
+        }
+
     </style>
 </head>
 <body>
     <h1>EPUB Reader</h1>
     
     <div class="container">
-        <div class="upload-section">
+        <div class="upload-section" id="uploadSection">
             <h2>Upload EPUB</h2>
             <input type="file" id="fileInput" accept=".epub">
             <button id="uploadBtn">Upload</button>
         </div>
         
+        <div id="postUploadInfo" class="hidden">
+             <div class="metadata-preview" id="metadataPreview">
+                 {/* Metadata will be loaded here */}
+             </div>
+             <div class="open-book-controls">
+                 <button id="openBookBtn">Open Book</button>
+             </div>
+        </div>
+
         <div class="reader-section hidden" id="readerSection">
             <div class="toc">
                 <div class="metadata" id="metadata"></div>
                 <h3>Table of Contents</h3>
                 <ul id="tocList"></ul>
             </div>
-            <div class="content" id="content"></div>
+            <div class="content-wrapper"> {/* Wrap controls and content */}
+                <div class="reader-controls">
+                    <div class="nav-buttons">
+                        <button id="prevChapter" disabled>Previous</button> {/* Start disabled */}
+                        <button id="nextChapter" disabled>Next</button> {/* Start disabled */}
+                    </div>
+                    <div class="settings-buttons">
+                        <div class="font-size-control">
+                            <button id="decreaseFontSize">A-</button>
+                            <button id="increaseFontSize">A+</button>
+                        </div>
+                        <button id="toggleTheme">Toggle Theme</button>
+                    </div>
+                </div>
+                <div class="content" id="content"></div>
+                <div class="progress-bar">
+                    <div class="progress-indicator" id="readingProgress"></div>
+                </div>
+            </div>
         </div>
     </div>
 
+    <!-- script runs when page loads, -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            console.log("DOM fully loaded and parsed.");
+
             const uploadBtn = document.getElementById('uploadBtn');
             const fileInput = document.getElementById('fileInput');
             const readerSection = document.getElementById('readerSection');
             const metadataSection = document.getElementById('metadata');
             const tocList = document.getElementById('tocList');
             const contentDiv = document.getElementById('content');
-            
+            const prevChapterBtn = document.getElementById('prevChapter');
+            const nextChapterBtn = document.getElementById('nextChapter');
+            const increaseFontBtn = document.getElementById('increaseFontSize');
+            const decreaseFontBtn = document.getElementById('decreaseFontSize');
+            const toggleThemeBtn = document.getElementById('toggleTheme');
+            const progressIndicator = document.getElementById('readingProgress');
+            const postUploadInfo = document.getElementById('postUploadInfo');
+            const metadataPreview = document.getElementById('metadataPreview');
+            const openBookBtn = document.getElementById('openBookBtn');
+            const uploadSection = document.getElementById('uploadSection');
+
             let currentFilename = null;
-            
-            uploadBtn.addEventListener('click', () => {
+            let currentToc = [];
+            let currentMetadata = {};
+            let currentChapterIndex = -1; // Start at -1 to indicate no chapter loaded initially
+            let fontSize = 100; // Base font size percentage
+
+            // --- Check if elements exist ---
+            console.log("Checking element references:");
+            console.log("  fileInput:", fileInput ? 'Found' : 'MISSING!');
+            console.log("  uploadBtn:", uploadBtn ? 'Found' : 'MISSING!');
+            console.log("  postUploadInfo:", postUploadInfo ? 'Found' : 'MISSING!');
+            console.log("  metadataPreview:", metadataPreview ? 'Found' : 'MISSING!');
+            console.log("  openBookBtn:", openBookBtn ? 'Found' : 'MISSING!');
+            console.log("  readerSection:", readerSection ? 'Found' : 'MISSING!');
+            console.log("  metadataSection:", metadataSection ? 'Found' : 'MISSING!');
+            console.log("  tocList:", tocList ? 'Found' : 'MISSING!');
+            console.log("  contentDiv:", contentDiv ? 'Found' : 'MISSING!');
+            console.log("  uploadSection:", uploadSection ? 'Found' : 'MISSING!');
+            // --- End Check ---
+
+            // --- Event Listeners ---
+            if (uploadBtn) {
+                uploadBtn.addEventListener('click', handleUpload);
+            } else {
+                console.error("Upload button not found, cannot add listener.");
+            }
+
+            if (openBookBtn) {
+                console.log("Attaching click listener to openBookBtn.");
+                openBookBtn.addEventListener('click', openBookReader);
+            } else {
+                console.error("Open Book button not found, cannot add listener!");
+            }
+
+            if (contentDiv) {
+                contentDiv.addEventListener('scroll', updateReadingProgress);
+            }
+            if (prevChapterBtn) {
+                prevChapterBtn.addEventListener('click', navigateToPrevChapter);
+            }
+            if (nextChapterBtn) {
+                nextChapterBtn.addEventListener('click', navigateToNextChapter);
+            }
+            if (decreaseFontBtn) {
+                decreaseFontBtn.addEventListener('click', () => changeFontSize(-10));
+            }
+            if (increaseFontBtn) {
+                increaseFontBtn.addEventListener('click', () => changeFontSize(10));
+            }
+            if (toggleThemeBtn) {
+                toggleThemeBtn.addEventListener('click', toggleTheme);
+            }
+
+            // --- Functions ---
+            function handleUpload() {
                 const file = fileInput.files[0];
                 if (!file) {
                     alert('Please select a file first');
                     return;
                 }
                 
+                // Reset UI before upload
+                resetReaderUI();
+                uploadSection.classList.remove('hidden');
+
                 const formData = new FormData();
                 formData.append('file', file);
                 
+                // calls the endpoint which writes to the server, and then we can read it 
                 fetch('/api/upload', {
                     method: 'POST',
                     body: formData
                 })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.file) {
-                        loadEpub(data.file);
+                .then(response => {
+                    if (!response.ok) {
+                        // Try to get error message from response body
+                        return response.json().then(err => {
+                            throw new Error(err.error || `HTTP error! status: ${response.status}`);
+                        }).catch(() => {
+                            // Fallback if response is not JSON or body is empty
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        });
                     }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Upload successful:', data);
+                    // Fetch metadata and TOC using the returned filename
+                    fetchEpubInfo(data.file);
                 })
                 .catch(error => {
                     console.error('Error uploading file:', error);
-                    alert('Error uploading file');
-                });
-            });
-            
-            function loadEpub(filename) {
-                currentFilename = filename;
-                
-                fetch(`/api/files/${filename}`)
-                .then(response => response.json())
-                .then(data => {
-                    // Display metadata
-                    const metadata = data.metadata;
-                    metadataSection.innerHTML = `
-                        <h3>${metadata.title || 'Unknown Title'}</h3>
-                        <p><strong>Author:</strong> ${metadata.creator || 'Unknown Author'}</p>
-                        <p><strong>Publisher:</strong> ${metadata.publisher || 'Unknown Publisher'}</p>
-                    `;
-                    
-                    // Display table of contents
-                    tocList.innerHTML = '';
-                    data.toc.forEach(item => {
-                        const li = document.createElement('li');
-                        li.textContent = item.title;
-                        li.addEventListener('click', () => {
-                            loadChapter(item.id);
-                        });
-                        tocList.appendChild(li);
-                    });
-                    
-                    // Show reader section
-                    readerSection.classList.remove('hidden');
-                    
-                    // Load first chapter if available
-                    if (data.toc.length > 0) {
-                        loadChapter(data.toc[0].id);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading EPUB:', error);
-                    alert('Error loading EPUB file');
+                    alert(`Error uploading file: ${error.message}`);
+                    resetReaderUI(); // Ensure UI is reset on error
                 });
             }
             
-            function loadChapter(chapterId) {
-                fetch(`/api/epub/${currentFilename}/chapter/${chapterId}`)
-                .then(response => response.text())
-                .then(html => {
-                    contentDiv.innerHTML = html;
-                    
-                    // Fix relative image paths
-                    const images = contentDiv.querySelectorAll('img');
-                    images.forEach(img => {
-                        if (img.src.startsWith('file://')) {
-                            // This is a workaround for local file references in EPUBs
-                            // Not ideal, but allows us to see that images should be here
-                            img.style.border = '1px dashed #ccc';
-                            img.style.padding = '10px';
-                            img.style.display = 'block';
-                            img.style.margin = '10px auto';
-                            img.style.maxWidth = '80%';
-                            img.alt = 'Image cannot be displayed (EPUB internal reference)';
-                        }
-                    });
+            function fetchEpubInfo(filename) {
+                console.log("VIBES FETCHING EPUB INFO");
+                currentFilename = filename;
+                
+                fetch(`/api/files/${filename}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Store data for later use
+                    currentMetadata = data.metadata || {};
+                    currentToc = data.toc || [];
+                    console.log("VIBES FETCHING EPUB INFO: ", currentMetadata, currentToc);
+
+                    // Display metadata preview
+                    metadataPreview.innerHTML = `
+                        <h4>${currentMetadata.title || 'Unknown Title'}</h4>
+                        <p><strong>Author:</strong> ${currentMetadata.creator || 'Unknown Author'}</p>
+                        <p><strong>Publisher:</strong> ${currentMetadata.publisher || 'Unknown Publisher'}</p>
+                        <p><i>${currentToc.length} chapter(s) found.</i></p>
+                    `;
+
+                    // Show the metadata preview and Open Book button
+                    postUploadInfo.classList.remove('hidden');
+
+                    // Keep reader section hidden for now
+                    readerSection.classList.add('hidden');
+
                 })
                 .catch(error => {
-                    console.error('Error loading chapter:', error);
-                    contentDiv.innerHTML = '<p>Error loading chapter content</p>';
+                    console.error('Error fetching EPUB info:', error);
+                    alert(`Error fetching EPUB info: ${error.message}`);
+                    resetReaderUI();
+                });
+            }
+            
+            function openBookReader() {
+                console.log("[openBookReader] Click detected! Function starting.");
+                console.log("[openBookReader] Function called.");
+                // Hide upload section and post-upload info
+                uploadSection.classList.add('hidden');
+                postUploadInfo.classList.add('hidden');
+
+                // Populate the persistent metadata display inside the reader
+                metadataSection.innerHTML = `
+                    <h4>${currentMetadata.title || 'Unknown Title'}</h4>
+                    <p><strong>Author:</strong> ${currentMetadata.creator || 'Unknown Author'}</p>
+                    <p><strong>Publisher:</strong> ${currentMetadata.publisher || 'Unknown Publisher'}</p>
+                `;
+
+                // Populate the TOC list
+                tocList.innerHTML = ''; // Clear previous TOC
+                if (currentToc.length > 0) {
+                    console.log("[openBookReader] Populating TOC list from currentToc:", currentToc); // Log TOC data
+                    currentToc.forEach((item, index) => {
+                        const li = document.createElement('li');
+                        li.textContent = item.title || `Chapter ${index + 1}`;
+                        li.dataset.index = index; // Store index
+                        li.dataset.chapterId = item.id; // Store chapter ID from TOC/Flow
+                        li.addEventListener('click', () => {
+                            // Pass index to loadChapterByIndex
+                            loadChapterByIndex(index);
+                        });
+                        tocList.appendChild(li);
+                    });
+                } else {
+                    console.warn("[openBookReader] currentToc is empty, cannot populate list.");
+                    tocList.innerHTML = '<li>No table of contents found.</li>';
+                }
+
+                // Show the main reader section
+                readerSection.classList.remove('hidden');
+                console.log("[openBookReader] Reader section shown.");
+
+                // Reset font size
+                fontSize = 100;
+                contentDiv.style.fontSize = `${fontSize}%`;
+
+                // Load the first chapter
+                if (currentToc.length > 0) {
+                    console.log("[openBookReader] Attempting to load first chapter (index 0).");
+                    loadChapterByIndex(0); // Load chapter by index
+                } else {
+                    console.warn("[openBookReader] No chapters in TOC, cannot load first chapter.");
+                    contentDiv.innerHTML = '<p>No chapters found in this EPUB.</p>';
+                    updateNavigationButtons();
+                }
+            }
+            
+            function resetReaderUI() {
+                // Hide reader sections
+                readerSection.classList.add('hidden');
+                postUploadInfo.classList.add('hidden');
+
+                // Clear dynamic content
+                metadataPreview.innerHTML = '';
+                metadataSection.innerHTML = '';
+                tocList.innerHTML = '';
+                contentDiv.innerHTML = '';
+                progressIndicator.style.width = '0%';
+
+                // Reset state variables
+                currentFilename = null;
+                currentToc = [];
+                currentMetadata = {};
+                currentChapterIndex = -1;
+
+                // Reset buttons
+                updateNavigationButtons();
+
+                // Ensure upload section is visible (might be hidden by openBookReader)
+                uploadSection.classList.remove('hidden');
+
+                // Reset file input value so the same file can be re-uploaded if needed
+                fileInput.value = '';
+            }
+            
+            function loadChapterByIndex(index) {
+                console.log(`[loadChapterByIndex] Called with index: ${index}`);
+                if (!currentToc || index < 0 || index >= currentToc.length) {
+                    console.error("[loadChapterByIndex] Invalid chapter index:", index, "TOC:", currentToc);
+                    return;
+                }
+                currentChapterIndex = index;
+                // Get the chapter ID stored in the TOC data
+                const chapterId = currentToc[currentChapterIndex].id;
+                console.log(`[loadChapterByIndex] Found chapterId: '${chapterId}' for index ${index}`);
+
+                if (!chapterId) {
+                    console.error("[loadChapterByIndex] Chapter ID is missing for index:", index, "TOC Item:", currentToc[currentChapterIndex]);
+                    contentDiv.innerHTML = '<p>Error: Could not load chapter (missing ID).</p>';
+                    updateNavigationButtons();
+                    updateTocHighlight();
+                    return;
+                }
+                // Call loadChapter with the retrieved ID
+                loadChapter(chapterId);
+            }
+            
+            function loadChapter(chapterId) {
+                console.log(`[loadChapter] Called with chapterId: '${chapterId}'`);
+                if (!currentFilename) {
+                    console.error("[loadChapter] currentFilename is not set.");
+                    return;
+                }
+                if (!chapterId) {
+                     console.error("[loadChapter] chapterId is null or empty.");
+                     return;
+                }
+
+                const apiUrl = `/api/epub/${currentFilename}/chapter/${chapterId}`;
+                console.log(`[loadChapter] Fetching URL: ${apiUrl}`);
+
+                fetch(apiUrl)
+                .then(response => {
+                     console.log(`[loadChapter] Response status for ${chapterId}: ${response.status}`);
+                     if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.text();
+                })
+                .then(html => {
+                    console.log(`[loadChapter] Received HTML content for ${chapterId}. Length: ${html.length}`);
+                    contentDiv.innerHTML = html;
+
+                    // Temporarily disable resource path fixing as the backend route is off
+                    // fixResourcePaths(contentDiv);
+
+                    // Reset scroll position and update progress
+                    contentDiv.scrollTop = 0;
+                    updateReadingProgress(); // Initial progress update
+                    updateNavigationButtons();
+                    updateTocHighlight();
+                    console.log(`[loadChapter] Chapter ${chapterId} loaded and displayed.`);
+                })
+                .catch(error => {
+                    console.error(`[loadChapter] Error loading chapter '${chapterId}':`, error);
+                    contentDiv.innerHTML = `<p>Error loading chapter content: ${error.message}</p>`;
+                    updateNavigationButtons(); // Still update buttons on error
+                    updateTocHighlight();
+                });
+            }
+            
+            function updateReadingProgress() {
+                const scrollTop = contentDiv.scrollTop;
+                const scrollHeight = contentDiv.scrollHeight;
+                const clientHeight = contentDiv.clientHeight;
+
+                // Avoid division by zero if scrollHeight equals clientHeight
+                const scrollableHeight = scrollHeight - clientHeight;
+                const scrollPercentage = scrollableHeight > 0 ? (scrollTop / scrollableHeight) * 100 : 100;
+
+                progressIndicator.style.width = `${Math.min(scrollPercentage, 100)}%`;
+            }
+            
+            function changeFontSize(delta) {
+                fontSize = Math.max(50, Math.min(200, fontSize + delta)); // Clamp font size
+                contentDiv.style.fontSize = `${fontSize}%`;
+                // Recalculate progress as font size change affects scroll height
+                updateReadingProgress();
+            }
+            
+            function toggleTheme() {
+                document.body.classList.toggle('dark-mode');
+                // Update TOC highlight color based on theme
+                updateTocHighlight();
+            }
+            
+            function navigateToPrevChapter() {
+                if (currentChapterIndex > 0) {
+                    loadChapterByIndex(currentChapterIndex - 1);
+                }
+            }
+            
+            function navigateToNextChapter() {
+                if (currentChapterIndex < currentToc.length - 1) {
+                    loadChapterByIndex(currentChapterIndex + 1);
+                }
+            }
+            
+            function updateNavigationButtons() {
+                prevChapterBtn.disabled = currentChapterIndex <= 0;
+                nextChapterBtn.disabled = currentChapterIndex < 0 || currentChapterIndex >= currentToc.length - 1;
+            }
+            
+            function updateTocHighlight() {
+                const tocItems = tocList.querySelectorAll('li');
+                tocItems.forEach((item, index) => {
+                    if (index === currentChapterIndex) {
+                        item.style.fontWeight = 'bold';
+                        item.style.color = document.body.classList.contains('dark-mode') ? '#7FFF7F' : '#4CAF50';
+                    } else {
+                        item.style.fontWeight = 'normal';
+                        item.style.color = ''; // Reset to default CSS color
+                    }
                 });
             }
         });

@@ -1,4 +1,3 @@
-
 // import deps
 const express = require('express');
 const multer = require('multer');
@@ -24,6 +23,9 @@ const upload = multer({ storage: storage });
 router.post('/upload', upload.single('file'), fileController.uploadFile);
 router.get('/files/:filename', fileController.getFile);
 router.get('/epub/:filename/chapter/:chapterId', fileController.getEpubChapter);
+
+// Temporarily disable the resource route causing the error
+// router.get('/epub/:filename/resource/*', fileController.getEpubResource);
 
 // OpenAI routes
 router.post('/summarize', async (req, res) => {

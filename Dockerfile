@@ -4,6 +4,8 @@ WORKDIR /app
 
 COPY package*.json ./
 
+# Ensure clean install based on package.json
+RUN rm -rf node_modules
 RUN npm install --production
 
 COPY . .
