@@ -4,10 +4,8 @@ require('dotenv').config(); // Ensure dotenv is configured
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-const MAX_BOOK_CONTEXT_CHARS = 1000000; // Limit book context to 1 million tokens
 
-// Limit total JSON string length sent to OpenAI
-const MAX_JSON_CONTEXT_CHARS = 1000000; // Adjust to 1 million tokens
+const MAX_JSON_CONTEXT_CHARS = 1000000;
 
 // TODO aditya add useful functionality to deeplink from the answer to the rest of the text.
 // The user should feel like they can explore and understand the book, while fully respecting the sourcce. 
