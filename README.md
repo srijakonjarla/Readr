@@ -1,5 +1,5 @@
 # EPUB Reader with AI Features
-A React application for reading EPUB books with AI-powered chat features.
+A web application for reading EPUB books with AI-powered chat features.
 
 ## Project Structure
 - `client/` - React frontend application
