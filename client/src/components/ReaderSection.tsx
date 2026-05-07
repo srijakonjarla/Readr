@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -10,18 +10,23 @@ import {
   Highlighter,
   Globe,
   StickyNote,
-} from 'lucide-react';
-import type { Book, BookInfo, Highlight, TocItem } from '../types';
-import TocDrawer from './TocDrawer';
+} from "lucide-react";
+import type { Book, BookInfo, Highlight, TocItem } from "../types";
+import TocDrawer from "./TocDrawer";
 
 interface ReaderSectionProps {
   book: Book;
   onBackToLibrary: () => void;
   highlights: Highlight[];
   onAddHighlight: (h: Highlight) => void;
-  onStartThread: (h: Highlight, chapterTitle: string, suggestedPrompt?: string) => void;
+  onStartThread: (
+    h: Highlight,
+    chapterTitle: string,
+    suggestedPrompt?: string,
+  ) => void;
   onOpenChat: () => void;
   chatOpen: boolean;
+  onChapterChange: (index: number) => void;
 }
 
 interface SelectionPopover {
@@ -30,9 +35,10 @@ interface SelectionPopover {
   text: string;
 }
 
-const lastChapterKey = (filename: string): string => `readr:lastChapter:${filename}`;
+const lastChapterKey = (filename: string): string =>
+  `readr:lastChapter:${filename}`;
 
-const ReaderSection: React.FC<ReaderSectionProps> = ({
+function ReaderSection({
   book,
   onBackToLibrary,
   highlights,
@@ -40,12 +46,13 @@ const ReaderSection: React.FC<ReaderSectionProps> = ({
   onStartThread,
   onOpenChat,
   chatOpen,
-}) => {
+  onChapterChange,
+}: ReaderSectionProps) {
   const [bookInfo, setBookInfo] = useState<BookInfo | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [toc, setToc] = useState<TocItem[]>([]);
   const [currentChapterIndex, setCurrentChapterIndex] = useState<number>(-1);
-  const [chapterContent, setChapterContent] = useState<string>('');
+  const [chapterContent, setChapterContent] = useState<string>("");
   const [scrollPct, setScrollPct] = useState<number>(0);
   const [selPopover, setSelPopover] = useState<SelectionPopover | null>(null);
   const [bookmarked, setBookmarked] = useState<boolean>(false);
@@ -60,22 +67,28 @@ const ReaderSection: React.FC<ReaderSectionProps> = ({
       setLoading(true);
       try {
         const response = await fetch(`/api/files/${book.filename}`);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok)
+          throw new Error(`HTTP error! status: ${response.status}`);
         const data: BookInfo = await response.json();
         setBookInfo(data);
         setToc(data.toc || []);
-        const remembered = window.localStorage.getItem(lastChapterKey(book.filename));
+        const remembered = window.localStorage.getItem(
+          lastChapterKey(book.filename),
+        );
         const initialIdx = remembered ? Number.parseInt(remembered, 10) : 0;
         if (data.toc && data.toc.length > 0) {
           setCurrentChapterIndex(
-            Number.isFinite(initialIdx) && initialIdx >= 0 && initialIdx < data.toc.length
+            Number.isFinite(initialIdx) &&
+              initialIdx >= 0 &&
+              initialIdx < data.toc.length
               ? initialIdx
-              : 0
+              : 0,
           );
         }
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unknown error';
-        console.error('Error fetching book details:', error);
+        const message =
+          error instanceof Error ? error.message : "Unknown error";
+        console.error("Error fetching book details:", error);
         alert(`Error fetching book details: ${message}`);
       } finally {
         setLoading(false);
@@ -84,18 +97,27 @@ const ReaderSection: React.FC<ReaderSectionProps> = ({
     fetchBookDetails();
   }, [book]);
 
+  // Notify parent whenever the active chapter index changes
+  useEffect(() => {
+    onChapterChange(currentChapterIndex);
+  }, [currentChapterIndex, onChapterChange]);
+
   // Load chapter content
   useEffect(() => {
     const loadChapter = async (chapterId: string): Promise<void> => {
       try {
-        setChapterContent('');
-        const response = await fetch(`/api/epub/${book.filename}/chapter/${chapterId}`);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        setChapterContent("");
+        const response = await fetch(
+          `/api/epub/${book.filename}/chapter/${chapterId}`,
+        );
+        if (!response.ok)
+          throw new Error(`HTTP error! status: ${response.status}`);
         const html = await response.text();
         setChapterContent(html);
         window.scrollTo({ top: 0 });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unknown error';
+        const message =
+          error instanceof Error ? error.message : "Unknown error";
         setChapterContent(`<p>Error loading chapter content: ${message}</p>`);
       }
     };
@@ -103,7 +125,7 @@ const ReaderSection: React.FC<ReaderSectionProps> = ({
       loadChapter(toc[currentChapterIndex].id);
       window.localStorage.setItem(
         lastChapterKey(book.filename),
-        String(currentChapterIndex)
+        String(currentChapterIndex),
       );
     }
   }, [currentChapterIndex, toc, book.filename]);
@@ -117,9 +139,9 @@ const ReaderSection: React.FC<ReaderSectionProps> = ({
       setScrollPct(pct);
       setSelPopover(null);
     };
-    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
-    return () => window.removeEventListener('scroll', onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
   }, [chapterContent]);
 
   // Selection → popover
@@ -152,11 +174,11 @@ const ReaderSection: React.FC<ReaderSectionProps> = ({
   }, []);
 
   useEffect(() => {
-    document.addEventListener('mouseup', handleMouseUp);
-    document.addEventListener('keyup', handleMouseUp);
+    document.addEventListener("mouseup", handleMouseUp);
+    document.addEventListener("keyup", handleMouseUp);
     return () => {
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.removeEventListener('keyup', handleMouseUp);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.removeEventListener("keyup", handleMouseUp);
     };
   }, [handleMouseUp]);
 
@@ -166,22 +188,28 @@ const ReaderSection: React.FC<ReaderSectionProps> = ({
   };
 
   const currentChapter = toc[currentChapterIndex];
-  const chapterTitle = currentChapter?.title ?? '';
-  const chapterHighlights = highlights.filter((h) => h.chapterIndex === currentChapterIndex);
-  const threadCount = chapterHighlights.filter((h) => h.kind === 'thread').length;
-  const highlightCount = chapterHighlights.filter((h) => h.kind === 'highlight').length;
+  const chapterTitle = currentChapter?.title ?? "";
+  const chapterHighlights = highlights.filter(
+    (h) => h.chapterIndex === currentChapterIndex,
+  );
+  const threadCount = chapterHighlights.filter(
+    (h) => h.kind === "thread",
+  ).length;
+  const highlightCount = chapterHighlights.filter(
+    (h) => h.kind === "highlight",
+  ).length;
 
   const handleAsk = (): void => {
     if (!selPopover || !currentChapter) return;
     const h: Highlight = {
       id: `h-${Date.now()}`,
-      kind: 'thread',
+      kind: "thread",
       chapterId: currentChapter.id,
       chapterIndex: currentChapterIndex,
       text: selPopover.text,
       threadCount: 1,
     };
-    onStartThread(h, chapterTitle, 'What does this passage mean?');
+    onStartThread(h, chapterTitle, "What does this passage mean?");
     dismissSelection();
   };
 
@@ -189,7 +217,7 @@ const ReaderSection: React.FC<ReaderSectionProps> = ({
     if (!selPopover || !currentChapter) return;
     const h: Highlight = {
       id: `h-${Date.now()}`,
-      kind: 'highlight',
+      kind: "highlight",
       chapterId: currentChapter.id,
       chapterIndex: currentChapterIndex,
       text: selPopover.text,
@@ -199,10 +227,12 @@ const ReaderSection: React.FC<ReaderSectionProps> = ({
   };
 
   const navPrev = (): void => {
-    if (currentChapterIndex > 0) setCurrentChapterIndex(currentChapterIndex - 1);
+    if (currentChapterIndex > 0)
+      setCurrentChapterIndex(currentChapterIndex - 1);
   };
   const navNext = (): void => {
-    if (currentChapterIndex < toc.length - 1) setCurrentChapterIndex(currentChapterIndex + 1);
+    if (currentChapterIndex < toc.length - 1)
+      setCurrentChapterIndex(currentChapterIndex + 1);
   };
 
   // Intercept clicks on links inside the rendered EPUB chapter HTML
@@ -210,10 +240,10 @@ const ReaderSection: React.FC<ReaderSectionProps> = ({
   const handleBodyClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>): void => {
       const target = e.target as HTMLElement;
-      const anchor = target.closest('a');
+      const anchor = target.closest("a");
       if (!anchor || !bodyRef.current?.contains(anchor)) return;
 
-      const href = anchor.getAttribute('href');
+      const href = anchor.getAttribute("href");
       if (!href) return;
 
       // External / scheme links — let the browser handle them
@@ -222,30 +252,33 @@ const ReaderSection: React.FC<ReaderSectionProps> = ({
       e.preventDefault();
 
       // Pure same-page fragment — scroll within current chapter
-      if (href.startsWith('#')) {
+      if (href.startsWith("#")) {
         const id = href.slice(1);
         const el = bodyRef.current.querySelector(`#${CSS.escape(id)}`);
-        el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        el?.scrollIntoView({ behavior: "smooth", block: "start" });
         return;
       }
 
       // Internal EPUB link: match by basename to a TOC entry
-      const [pathPart] = href.split('#');
-      const linkBase = (pathPart.split('/').pop() ?? '').toLowerCase();
+      const [pathPart] = href.split("#");
+      const linkBase = (pathPart.split("/").pop() ?? "").toLowerCase();
       if (!linkBase) return;
 
       const idx = toc.findIndex((t) => {
-        const tocHref = (t.href ?? '').split('/').pop()?.toLowerCase() ?? '';
+        const tocHref = (t.href ?? "").split("/").pop()?.toLowerCase() ?? "";
         return tocHref === linkBase;
       });
 
       if (idx >= 0) {
         setCurrentChapterIndex(idx);
       } else {
-        console.warn('[ReaderSection] internal EPUB link did not match any TOC item:', href);
+        console.warn(
+          "[ReaderSection] internal EPUB link did not match any TOC item:",
+          href,
+        );
       }
     },
-    [toc]
+    [toc],
   );
 
   if (loading) {
@@ -270,15 +303,21 @@ const ReaderSection: React.FC<ReaderSectionProps> = ({
   return (
     <article ref={articleRef} className="relative min-h-screen">
       {/* Floating top chrome */}
-      <div
-        className="pointer-events-none fixed left-4 right-4 top-4 z-40 flex items-center justify-between"
-      >
+      <div className="pointer-events-none fixed left-4 right-4 top-4 z-40 flex items-center justify-between">
         <div className="float-pill">
-          <button onClick={onBackToLibrary} className="pill-btn" title="Library">
+          <button
+            onClick={onBackToLibrary}
+            className="pill-btn"
+            title="Library"
+          >
             <ArrowLeft size={15} />
           </button>
           <span className="pill-divider" />
-          <button onClick={() => setShowToc(true)} className="pill-btn" title="Contents">
+          <button
+            onClick={() => setShowToc(true)}
+            className="pill-btn"
+            title="Contents"
+          >
             <List size={15} />
           </button>
           <button className="pill-btn" title="Search" disabled>
@@ -288,21 +327,30 @@ const ReaderSection: React.FC<ReaderSectionProps> = ({
 
         <div
           className="float-pill"
-          style={{ padding: '6px 14px', fontSize: 12, fontWeight: 500, color: 'var(--ink-2)' }}
+          style={{
+            padding: "6px 14px",
+            fontSize: 12,
+            fontWeight: 500,
+            color: "var(--ink-2)",
+          }}
         >
-          <span style={{ color: 'var(--ink-3)' }}>
+          <span style={{ color: "var(--ink-3)" }}>
             Ch. {currentChapterIndex + 1}
           </span>
-          <span style={{ margin: '0 8px' }}>{chapterTitle || '—'}</span>
-          <span style={{ color: 'var(--ink-3)', marginRight: 8 }}>·</span>
+          <span style={{ margin: "0 8px" }}>{chapterTitle || "—"}</span>
+          <span style={{ color: "var(--ink-3)", marginRight: 8 }}>·</span>
           <span
             style={{
-              fontVariantNumeric: 'tabular-nums',
+              fontVariantNumeric: "tabular-nums",
               fontWeight: 600,
-              color: 'var(--accent)',
+              color: "var(--accent)",
             }}
           >
-            {Math.round(((currentChapterIndex + scrollPct) / Math.max(1, toc.length)) * 100)}%
+            {Math.round(
+              ((currentChapterIndex + scrollPct) / Math.max(1, toc.length)) *
+                100,
+            )}
+            %
           </span>
         </div>
 
@@ -310,10 +358,10 @@ const ReaderSection: React.FC<ReaderSectionProps> = ({
           <button
             onClick={() => setBookmarked((b) => !b)}
             className="pill-btn"
-            title={bookmarked ? 'Bookmarked' : 'Bookmark'}
-            style={bookmarked ? { color: 'var(--accent)' } : undefined}
+            title={bookmarked ? "Bookmarked" : "Bookmark"}
+            style={bookmarked ? { color: "var(--accent)" } : undefined}
           >
-            <Bookmark size={15} fill={bookmarked ? 'currentColor' : 'none'} />
+            <Bookmark size={15} fill={bookmarked ? "currentColor" : "none"} />
           </button>
         </div>
       </div>
@@ -322,7 +370,7 @@ const ReaderSection: React.FC<ReaderSectionProps> = ({
       {toc.length > 1 && (
         <div
           className="fixed top-1/2 z-30 flex flex-col gap-2.5"
-          style={{ left: 36, transform: 'translateY(-50%)' }}
+          style={{ left: 36, transform: "translateY(-50%)" }}
         >
           {toc.map((c, i) => (
             <button
@@ -334,10 +382,10 @@ const ReaderSection: React.FC<ReaderSectionProps> = ({
                 height: 6,
                 borderRadius: 3,
                 background:
-                  i === currentChapterIndex ? 'var(--accent)' : 'var(--rule)',
-                transition: 'all .25s ease',
-                border: 'none',
-                cursor: 'pointer',
+                  i === currentChapterIndex ? "var(--accent)" : "var(--rule)",
+                transition: "all .25s ease",
+                border: "none",
+                cursor: "pointer",
                 padding: 0,
               }}
             />
@@ -348,7 +396,7 @@ const ReaderSection: React.FC<ReaderSectionProps> = ({
       {/* Reading column */}
       <div
         className="mx-auto max-w-reading"
-        style={{ padding: '140px 100px 220px' }}
+        style={{ padding: "140px 100px 220px" }}
       >
         {/* Chapter chip */}
         <div className="chip-accent mb-6">
@@ -363,34 +411,35 @@ const ReaderSection: React.FC<ReaderSectionProps> = ({
             margin: 0,
             fontSize: 56,
             fontWeight: 700,
-            letterSpacing: '-0.035em',
+            letterSpacing: "-0.035em",
             lineHeight: 1,
-            textWrap: 'balance',
+            textWrap: "balance",
           }}
         >
-          {chapterTitle || 'Untitled chapter'}
+          {chapterTitle || "Untitled chapter"}
         </h1>
 
         {/* Meta row */}
         <div
           className="text-ink-3 flex flex-wrap items-center gap-4"
-          style={{ margin: '40px 0 56px', fontSize: 12, fontWeight: 500 }}
+          style={{ margin: "40px 0 56px", fontSize: 12, fontWeight: 500 }}
         >
           <span className="inline-flex items-center gap-1.5">
-            <BookOpen size={12} /> {bookInfo.metadata?.title || 'Book'}
+            <BookOpen size={12} /> {bookInfo.metadata?.title || "Book"}
           </span>
           {highlightCount > 0 && (
             <span className="inline-flex items-center gap-1.5">
-              <Highlighter size={12} />{' '}
-              {highlightCount} highlight{highlightCount === 1 ? '' : 's'}
+              <Highlighter size={12} /> {highlightCount} highlight
+              {highlightCount === 1 ? "" : "s"}
             </span>
           )}
           {threadCount > 0 && (
             <span
               className="inline-flex items-center gap-1.5"
-              style={{ color: 'var(--accent)' }}
+              style={{ color: "var(--accent)" }}
             >
-              <Sparkles size={12} /> {threadCount} thread{threadCount === 1 ? '' : 's'}
+              <Sparkles size={12} /> {threadCount} thread
+              {threadCount === 1 ? "" : "s"}
             </span>
           )}
         </div>
@@ -410,9 +459,9 @@ const ReaderSection: React.FC<ReaderSectionProps> = ({
             style={{
               padding: 28,
               borderRadius: 16,
-              background: 'var(--paper)',
-              border: '1px solid var(--rule-2)',
-              gridTemplateColumns: '1fr auto',
+              background: "var(--paper)",
+              border: "1px solid var(--rule-2)",
+              gridTemplateColumns: "1fr auto",
             }}
           >
             <div>
@@ -422,7 +471,7 @@ const ReaderSection: React.FC<ReaderSectionProps> = ({
                 style={{
                   fontSize: 24,
                   fontWeight: 700,
-                  letterSpacing: '-0.02em',
+                  letterSpacing: "-0.02em",
                 }}
               >
                 {toc[currentChapterIndex + 1]?.title}
@@ -439,7 +488,11 @@ const ReaderSection: React.FC<ReaderSectionProps> = ({
 
         {/* Prev/Next chapter row at bottom */}
         <div className="mt-12 flex items-center justify-between">
-          <button onClick={navPrev} disabled={currentChapterIndex <= 0} className="btn-soft">
+          <button
+            onClick={navPrev}
+            disabled={currentChapterIndex <= 0}
+            className="btn-soft"
+          >
             <ArrowLeft size={14} /> Previous
           </button>
           <button
@@ -455,14 +508,14 @@ const ReaderSection: React.FC<ReaderSectionProps> = ({
       {/* Bottom progress bar */}
       <div
         className="fixed bottom-0 left-0 right-0 z-20"
-        style={{ height: 3, background: 'var(--bg-2)' }}
+        style={{ height: 3, background: "var(--bg-2)" }}
       >
         <div
           style={{
-            height: '100%',
+            height: "100%",
             width: `${((currentChapterIndex + scrollPct) / Math.max(1, toc.length)) * 100}%`,
-            background: 'var(--accent)',
-            transition: 'width .1s linear',
+            background: "var(--accent)",
+            transition: "width .1s linear",
           }}
         />
       </div>
@@ -471,38 +524,42 @@ const ReaderSection: React.FC<ReaderSectionProps> = ({
       {selPopover && (
         <div
           style={{
-            position: 'fixed',
+            position: "fixed",
             left: selPopover.x,
             top: selPopover.y,
-            transform: 'translate(-50%, -100%)',
-            background: 'var(--ink)',
+            transform: "translate(-50%, -100%)",
+            background: "var(--ink)",
             borderRadius: 12,
             padding: 4,
-            display: 'flex',
-            alignItems: 'center',
-            boxShadow: '0 12px 28px -10px rgba(0,0,0,.35)',
+            display: "flex",
+            alignItems: "center",
+            boxShadow: "0 12px 28px -10px rgba(0,0,0,.35)",
             zIndex: 90,
           }}
         >
           <button
             onClick={handleAsk}
             style={{
-              all: 'unset',
-              cursor: 'pointer',
-              padding: '8px 12px',
+              all: "unset",
+              cursor: "pointer",
+              padding: "8px 12px",
               borderRadius: 8,
-              display: 'inline-flex',
-              alignItems: 'center',
+              display: "inline-flex",
+              alignItems: "center",
               gap: 6,
-              background: 'var(--accent)',
-              color: '#fff',
+              background: "var(--accent)",
+              color: "#fff",
               fontSize: 12,
               fontWeight: 600,
             }}
           >
             <Sparkles size={13} /> Ask
           </button>
-          <PopBtn onClick={handleHighlight} icon={<Highlighter size={13} />} label="Highlight" />
+          <PopBtn
+            onClick={handleHighlight}
+            icon={<Highlighter size={13} />}
+            label="Highlight"
+          />
           <PopBtn icon={<Globe size={13} />} label="Define" disabled />
           <PopBtn icon={<StickyNote size={13} />} label="Note" disabled />
         </div>
@@ -510,23 +567,23 @@ const ReaderSection: React.FC<ReaderSectionProps> = ({
 
       {/* Always-visible Companion FAB (hidden when chat is open) */}
       {!chatOpen && !showToc && (
-      <button
-        onClick={onOpenChat}
-        className="fixed z-[60] flex items-center gap-2.5 rounded-full px-5 py-3.5 text-white shadow-lg transition-transform hover:scale-105"
-        style={{
-          right: 28,
-          bottom: 28,
-          background: 'var(--accent)',
-          boxShadow:
-            '0 1px 0 rgba(255,255,255,.25) inset, 0 12px 28px -8px rgba(0,0,0,.25)',
-          fontSize: 14,
-          fontWeight: 600,
-          letterSpacing: '-0.01em',
-        }}
-      >
-        <Sparkles size={16} />
-        Ask the Companion
-      </button>
+        <button
+          onClick={onOpenChat}
+          className="fixed z-[60] flex items-center gap-2.5 rounded-full px-5 py-3.5 text-white shadow-lg transition-transform hover:scale-105"
+          style={{
+            right: 28,
+            bottom: 28,
+            background: "var(--accent)",
+            boxShadow:
+              "0 1px 0 rgba(255,255,255,.25) inset, 0 12px 28px -8px rgba(0,0,0,.25)",
+            fontSize: 14,
+            fontWeight: 600,
+            letterSpacing: "-0.01em",
+          }}
+        >
+          <Sparkles size={16} />
+          Ask the Companion
+        </button>
       )}
 
       {/* TOC drawer */}
@@ -545,7 +602,7 @@ const ReaderSection: React.FC<ReaderSectionProps> = ({
       )}
     </article>
   );
-};
+}
 
 interface PopBtnProps {
   icon: React.ReactNode;
@@ -554,26 +611,28 @@ interface PopBtnProps {
   disabled?: boolean;
 }
 
-const PopBtn: React.FC<PopBtnProps> = ({ icon, label, onClick, disabled }) => (
-  <button
-    onClick={onClick}
-    disabled={disabled}
-    style={{
-      all: 'unset',
-      cursor: disabled ? 'not-allowed' : 'pointer',
-      padding: '8px 12px',
-      borderRadius: 8,
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: 6,
-      color: 'rgba(255,255,255,.85)',
-      fontSize: 12,
-      fontWeight: 500,
-      opacity: disabled ? 0.5 : 1,
-    }}
-  >
-    {icon} {label}
-  </button>
-);
+function PopBtn({ icon, label, onClick, disabled }: PopBtnProps) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        all: "unset",
+        cursor: disabled ? "not-allowed" : "pointer",
+        padding: "8px 12px",
+        borderRadius: 8,
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        color: "rgba(255,255,255,.85)",
+        fontSize: 12,
+        fontWeight: 500,
+        opacity: disabled ? 0.5 : 1,
+      }}
+    >
+      {icon} {label}
+    </button>
+  );
+}
 
 export default ReaderSection;

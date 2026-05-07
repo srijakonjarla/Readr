@@ -1,6 +1,6 @@
-import Anthropic from '@anthropic-ai/sdk';
-import 'dotenv/config';
-import type { BookJsonData, ChatResponse } from './types';
+import Anthropic from "@anthropic-ai/sdk";
+import "dotenv/config";
+import type { BookJsonData, ChatResponse } from "./types";
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -20,54 +20,62 @@ class ClaudeService {
   async getChatResponse(
     bookJsonData: BookJsonData,
     selectedText: string | undefined,
-    query: string
+    query: string,
   ): Promise<ChatResponse> {
     const chapterCount = bookJsonData.chapters?.length || 0;
-    console.log(`[claudeService.getChatResponse] Chapters in context: ${chapterCount}`);
     console.log(
-      `[claudeService.getChatResponse] Selected text length: ${selectedText ? selectedText.length : 0}`
+      `[claudeService.getChatResponse] Chapters in context: ${chapterCount}`,
+    );
+    console.log(
+      `[claudeService.getChatResponse] Selected text length: ${selectedText ? selectedText.length : 0}`,
     );
     console.log(`[claudeService.getChatResponse] Query: "${query}"`);
 
     let bookContextString: string;
-    let truncationNote = '';
+    let truncationNote = "";
     try {
       bookContextString = JSON.stringify(bookJsonData);
       if (bookContextString.length > MAX_JSON_CONTEXT_CHARS) {
-        bookContextString = bookContextString.substring(0, MAX_JSON_CONTEXT_CHARS);
-        truncationNote = ' (Note: book context was truncated due to length.)';
+        bookContextString = bookContextString.substring(
+          0,
+          MAX_JSON_CONTEXT_CHARS,
+        );
+        truncationNote = " (Note: book context was truncated due to length.)";
         console.warn(
-          `[claudeService.getChatResponse] Truncated book JSON to ${MAX_JSON_CONTEXT_CHARS} chars.`
+          `[claudeService.getChatResponse] Truncated book JSON to ${MAX_JSON_CONTEXT_CHARS} chars.`,
         );
       }
     } catch (err) {
-      console.error('[claudeService.getChatResponse] Failed to stringify book JSON:', err);
-      throw new Error('Failed to prepare book data for AI.');
+      console.error(
+        "[claudeService.getChatResponse] Failed to stringify book JSON:",
+        err,
+      );
+      throw new Error("Failed to prepare book data for AI.");
     }
 
     try {
       const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-6',
+        model: "claude-sonnet-4-6",
         max_tokens: 1024,
-        thinking: { type: 'disabled' },
+        thinking: { type: "disabled" },
         system: SPOILER_SAFE_SYSTEM,
         messages: [
           {
-            role: 'user',
+            role: "user",
             content: [
               {
-                type: 'text',
+                type: "text",
                 text: `Book read so far (JSON):\n\`\`\`json\n${bookContextString}\n\`\`\`${truncationNote}`,
-                cache_control: { type: 'ephemeral' },
+                cache_control: { type: "ephemeral" },
               },
               {
-                type: 'text',
+                type: "text",
                 text: selectedText
                   ? `Selected snippet from the current chapter:\n\`\`\`\n${selectedText}\n\`\`\``
-                  : 'No specific snippet selected.',
+                  : "No specific snippet selected.",
               },
               {
-                type: 'text',
+                type: "text",
                 text: `Question: ${query}`,
               },
             ],
@@ -77,21 +85,27 @@ class ClaudeService {
 
       const usage = response.usage;
       console.log(
-        `[claudeService.getChatResponse] usage — input: ${usage.input_tokens}, cache_read: ${usage.cache_read_input_tokens}, cache_create: ${usage.cache_creation_input_tokens}, output: ${usage.output_tokens}`
+        `[claudeService.getChatResponse] usage — input: ${usage.input_tokens}, cache_read: ${usage.cache_read_input_tokens}, cache_create: ${usage.cache_creation_input_tokens}, output: ${usage.output_tokens}`,
       );
 
-      const textBlock = response.content.find((b) => b.type === 'text');
-      const responseContent = textBlock && textBlock.type === 'text' ? textBlock.text.trim() : '';
+      const textBlock = response.content.find((b) => b.type === "text");
+      const responseContent =
+        textBlock && textBlock.type === "text" ? textBlock.text.trim() : "";
 
       if (!responseContent) {
-        console.error('[claudeService.getChatResponse] Empty response from Claude.');
-        throw new Error('Received an empty response from AI service.');
+        console.error(
+          "[claudeService.getChatResponse] Empty response from Claude.",
+        );
+        throw new Error("Received an empty response from AI service.");
       }
 
       return { response: responseContent };
     } catch (error) {
-      console.error('[claudeService.getChatResponse] Error calling Claude API:', error);
-      let errorMessage = 'Failed to get chat response from AI service.';
+      console.error(
+        "[claudeService.getChatResponse] Error calling Claude API:",
+        error,
+      );
+      let errorMessage = "Failed to get chat response from AI service.";
       if (error instanceof Anthropic.APIError) {
         errorMessage = `Claude Error: ${error.status} ${error.name} - ${error.message}`;
       } else if (error instanceof Error) {

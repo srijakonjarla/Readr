@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { ArrowRight, ArrowLeft } from "lucide-react";
 import type { Book, BookInfo } from "../types";
 import { bookGradient, bookHue, chipHueColor } from "../util/hue";
@@ -9,11 +9,11 @@ interface MetadataPreviewProps {
   onBackToLibrary: () => void;
 }
 
-const MetadataPreview: React.FC<MetadataPreviewProps> = ({
+function MetadataPreview({
   book,
   onOpenBook,
   onBackToLibrary,
-}) => {
+}: MetadataPreviewProps) {
   const [bookInfo, setBookInfo] = useState<BookInfo | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -186,29 +186,31 @@ const MetadataPreview: React.FC<MetadataPreviewProps> = ({
       </div>
     </section>
   );
-};
+}
 
-const Stat: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-  <div>
-    <div
-      className="text-ink-3"
-      style={{
-        fontSize: 11,
-        fontWeight: 600,
-        letterSpacing: "0.04em",
-        marginBottom: 6,
-        textTransform: "uppercase",
-      }}
-    >
-      {label}
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div
+        className="text-ink-3"
+        style={{
+          fontSize: 11,
+          fontWeight: 600,
+          letterSpacing: "0.04em",
+          marginBottom: 6,
+          textTransform: "uppercase",
+        }}
+      >
+        {label}
+      </div>
+      <div
+        className="truncate text-ink"
+        style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em" }}
+      >
+        {value}
+      </div>
     </div>
-    <div
-      className="truncate text-ink"
-      style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em" }}
-    >
-      {value}
-    </div>
-  </div>
-);
+  );
+}
 
 export default MetadataPreview;

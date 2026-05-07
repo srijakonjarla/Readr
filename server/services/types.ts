@@ -1,4 +1,4 @@
-import type { Metadata } from 'epub';
+import type { Metadata } from "epub";
 
 export interface BookChapter {
   id: string;

@@ -59,16 +59,19 @@ The application was divided into the following React components:
 ## How to Run
 
 1. Install all dependencies:
+
    ```
    npm install && npm run client-install
    ```
 
 2. Run in development mode:
+
    ```
    npm run dev
    ```
 
 3. Build for production:
+
    ```
    npm run client-build
    ```

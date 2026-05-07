@@ -1,5 +1,5 @@
-import React from 'react';
-import { miniGradient } from '../util/hue';
+import React from "react";
+import { miniGradient } from "../util/hue";
 
 interface MiniCoverProps {
   hue: number;
@@ -9,13 +9,13 @@ interface MiniCoverProps {
   progress?: number;
 }
 
-const MiniCover: React.FC<MiniCoverProps> = ({
+function MiniCover({
   hue,
   title,
   width = 56,
   height = 84,
   progress,
-}) => {
+}: MiniCoverProps) {
   return (
     <div
       style={{
@@ -23,55 +23,55 @@ const MiniCover: React.FC<MiniCoverProps> = ({
         height,
         borderRadius: 6,
         background: miniGradient(hue),
-        boxShadow: '0 6px 16px -8px rgba(31,27,22,.3)',
-        position: 'relative',
-        overflow: 'hidden',
+        boxShadow: "0 6px 16px -8px rgba(31,27,22,.3)",
+        position: "relative",
+        overflow: "hidden",
         flexShrink: 0,
       }}
     >
       {title && (
         <div
           style={{
-            position: 'absolute',
+            position: "absolute",
             top: 10,
             left: 8,
             right: 8,
             fontFamily: '"Source Serif 4", Georgia, serif',
             fontSize: 9,
             fontWeight: 600,
-            color: '#fff',
+            color: "#fff",
             lineHeight: 1.1,
-            display: '-webkit-box',
+            display: "-webkit-box",
             WebkitLineClamp: 4,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
           }}
         >
           {title}
         </div>
       )}
-      {typeof progress === 'number' && (
+      {typeof progress === "number" && (
         <div
           style={{
-            position: 'absolute',
+            position: "absolute",
             left: 0,
             right: 0,
             bottom: 0,
             height: 4,
-            background: 'rgba(255,255,255,.15)',
+            background: "rgba(255,255,255,.15)",
           }}
         >
           <div
             style={{
-              height: '100%',
+              height: "100%",
               width: `${Math.min(100, Math.max(0, progress * 100))}%`,
-              background: 'var(--accent)',
+              background: "var(--accent)",
             }}
           />
         </div>
       )}
     </div>
   );
-};
+}
 
 export default MiniCover;

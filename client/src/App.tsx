@@ -28,6 +28,7 @@ function App(): React.ReactElement {
   const [threads, setThreads] = useState<Record<string, Thread[]>>({});
   const [activeThreadId, setActiveThreadId] = useState<string>("main");
   const [pendingPrompt, setPendingPrompt] = useState<string | null>(null);
+  const [readerChapterIndex, setReaderChapterIndex] = useState<number>(-1);
 
   const fetchBooks = useCallback(async (): Promise<void> => {
     try {
@@ -107,6 +108,7 @@ function App(): React.ReactElement {
     setActiveSection("library");
     setCurrentBook(null);
     setChatOpen(false);
+    setReaderChapterIndex(-1);
   };
 
   // ─── Highlight / thread mutations (called from ReaderSection) ───
@@ -269,6 +271,7 @@ function App(): React.ReactElement {
             onStartThread={startThreadFromSelection}
             onOpenChat={() => setChatOpen(true)}
             chatOpen={chatOpen}
+            onChapterChange={setReaderChapterIndex}
           />
         )}
       </main>
@@ -284,6 +287,7 @@ function App(): React.ReactElement {
           onAppendMessage={appendMessage}
           pendingPrompt={pendingPrompt}
           clearPendingPrompt={() => setPendingPrompt(null)}
+          currentChapterIndex={readerChapterIndex}
         />
       )}
     </div>

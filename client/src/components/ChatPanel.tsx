@@ -1,6 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { X, Sparkles, Send, Quote, MessageSquare } from 'lucide-react';
-import type { Book, ChatMessage, Provider, Thread } from '../types';
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { X, Sparkles, Send, Quote, MessageSquare } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import type { Book, ChatMessage, Provider, Thread } from "../types";
 
 interface ChatPanelProps {
   open: boolean;
@@ -12,9 +14,36 @@ interface ChatPanelProps {
   onAppendMessage: (threadId: string, msg: ChatMessage) => void;
   pendingPrompt: string | null;
   clearPendingPrompt: () => void;
+  /** Current chapter the reader is on; used as the spoiler cutoff for un-anchored asks. */
+  currentChapterIndex: number;
 }
 
-const ChatPanel: React.FC<ChatPanelProps> = ({
+interface Ask {
+  question: ChatMessage;
+  answer: ChatMessage | null;
+}
+
+const groupAsks = (messages: ChatMessage[]): Ask[] => {
+  const result: Ask[] = [];
+  for (let i = 0; i < messages.length; i++) {
+    const msg = messages[i];
+    if (msg.role === "user") {
+      const next = messages[i + 1];
+      const answer = next?.role === "assistant" ? next : null;
+      result.push({ question: msg, answer });
+      if (answer) i++;
+    } else {
+      // Orphan assistant message (shouldn't happen but be defensive)
+      result.push({
+        question: { role: "user", text: "(no question)" },
+        answer: msg,
+      });
+    }
+  }
+  return result;
+};
+
+function ChatPanel({
   open,
   onClose,
   book,
@@ -24,13 +53,19 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
   onAppendMessage,
   pendingPrompt,
   clearPendingPrompt,
-}) => {
-  const [input, setInput] = useState<string>('');
-  const [provider, setProvider] = useState<Provider>('claude');
+  currentChapterIndex,
+}: ChatPanelProps) {
+  const [input, setInput] = useState<string>("");
+  const [provider, setProvider] = useState<Provider>("claude");
   const [sending, setSending] = useState<boolean>(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const activeThread = threads.find((t) => t.id === activeThreadId) ?? threads[0];
+  const activeThread =
+    threads.find((t) => t.id === activeThreadId) ?? threads[0];
+  const asks = useMemo(
+    () => (activeThread ? groupAsks(activeThread.messages) : []),
+    [activeThread],
+  );
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -41,21 +76,25 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
   const submit = async (textArg?: string): Promise<void> => {
     const text = (textArg ?? input).trim();
     if (!text || !activeThread) return;
-    setInput('');
-    onAppendMessage(activeThread.id, { role: 'user', text });
+    setInput("");
+    onAppendMessage(activeThread.id, { role: "user", text });
     setSending(true);
 
     try {
+      // Spoiler cutoff: anchored thread captures its chapter at creation
+      // time; for the General thread, fall back to the reader's current
+      // chapter so we don't accidentally send the rest of the book.
+      const cutoffIdx = activeThread.chapterIndex ?? currentChapterIndex;
       const body = {
         query: text,
-        context: activeThread.anchor?.text ?? '',
+        context: activeThread.anchor?.text ?? "",
         filename: book.filename,
-        currentChapterIndex: activeThread.chapterIndex ?? undefined,
+        currentChapterIndex: cutoffIdx >= 0 ? cutoffIdx : undefined,
         provider,
       };
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
       if (!res.ok) {
@@ -64,14 +103,14 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
       }
       const data = await res.json();
       onAppendMessage(activeThread.id, {
-        role: 'assistant',
+        role: "assistant",
         text: data.response,
         anchor: !!activeThread.anchor,
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
+      const message = error instanceof Error ? error.message : "Unknown error";
       onAppendMessage(activeThread.id, {
-        role: 'assistant',
+        role: "assistant",
         text: `Error: ${message}`,
       });
     } finally {
@@ -96,17 +135,17 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
       className="fixed right-0 top-0 bottom-0 z-40 flex flex-col"
       style={{
         width: 420,
-        background: 'var(--paper)',
-        borderLeft: '1px solid var(--rule-2)',
-        boxShadow: '-6px 0 28px -18px rgba(31,27,22,.18)',
+        background: "var(--paper)",
+        borderLeft: "1px solid var(--rule-2)",
+        boxShadow: "-6px 0 28px -18px rgba(31,27,22,.18)",
       }}
     >
       {/* Header */}
       <div
         className="flex items-center justify-between"
         style={{
-          padding: '18px 22px 14px',
-          borderBottom: '1px solid var(--rule-2)',
+          padding: "18px 22px 14px",
+          borderBottom: "1px solid var(--rule-2)",
         }}
       >
         <div className="flex items-center gap-2.5">
@@ -115,11 +154,11 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
               width: 28,
               height: 28,
               borderRadius: 999,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'color-mix(in oklab, var(--accent) 18%, transparent)',
-              color: 'var(--accent)',
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "color-mix(in oklab, var(--accent) 18%, transparent)",
+              color: "var(--accent)",
             }}
           >
             <Sparkles size={15} strokeWidth={1.8} />
@@ -139,18 +178,23 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
               style={{
                 fontFamily: '"JetBrains Mono", monospace',
                 fontSize: 10,
-                color: 'var(--ink-3)',
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
+                color: "var(--ink-3)",
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
               }}
             >
-              Reading with you
+              One question at a time
             </div>
           </div>
         </div>
         <button
           onClick={onClose}
-          style={{ all: 'unset', cursor: 'pointer', color: 'var(--ink-3)', padding: 4 }}
+          style={{
+            all: "unset",
+            cursor: "pointer",
+            color: "var(--ink-3)",
+            padding: 4,
+          }}
           aria-label="Close"
         >
           <X size={18} />
@@ -160,53 +204,61 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
       {/* Provider toggle */}
       <div
         className="flex items-center gap-2 px-5 py-2"
-        style={{ borderBottom: '1px solid var(--rule-2)', fontSize: 11 }}
+        style={{ borderBottom: "1px solid var(--rule-2)", fontSize: 11 }}
       >
-        <span className="text-ink-3" style={{ letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+        <span
+          className="text-ink-3"
+          style={{ letterSpacing: "0.08em", textTransform: "uppercase" }}
+        >
           Model
         </span>
         <button
-          onClick={() => setProvider('openai')}
+          onClick={() => setProvider("openai")}
           className="nav-chip"
-          aria-selected={provider === 'openai'}
-          style={{ fontSize: 11, padding: '4px 10px' }}
+          aria-pressed={provider === "openai"}
+          style={{ fontSize: 11, padding: "4px 10px" }}
         >
           GPT-4.1-mini
         </button>
         <button
-          onClick={() => setProvider('claude')}
+          onClick={() => setProvider("claude")}
           className="nav-chip"
-          aria-selected={provider === 'claude'}
-          style={{ fontSize: 11, padding: '4px 10px' }}
+          aria-pressed={provider === "claude"}
+          style={{ fontSize: 11, padding: "4px 10px" }}
         >
           Claude Sonnet 4.6
         </button>
       </div>
 
-      {/* Thread tabs */}
+      {/* Context (formerly thread tabs) */}
       {threads.length > 1 && (
         <div
-          className="flex gap-0.5 overflow-x-auto px-3.5"
-          style={{ borderBottom: '1px solid var(--rule-2)', paddingTop: 10 }}
+          className="flex items-center gap-2 px-5 py-2"
+          style={{ borderBottom: "1px solid var(--rule-2)", overflowX: "auto" }}
         >
+          <span
+            className="text-ink-3"
+            style={{
+              fontSize: 11,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              whiteSpace: "nowrap",
+            }}
+          >
+            Context
+          </span>
           {threads.map((t) => {
             const active = t.id === activeThreadId;
             return (
               <button
                 key={t.id}
                 onClick={() => onSwitchThread(t.id)}
+                className="nav-chip"
+                aria-pressed={active}
                 style={{
-                  all: 'unset',
-                  cursor: 'pointer',
-                  padding: '8px 12px',
-                  borderBottom: active ? '2px solid var(--accent)' : '2px solid transparent',
-                  fontSize: 12,
-                  fontWeight: active ? 600 : 500,
-                  color: active ? 'var(--ink)' : 'var(--ink-3)',
-                  whiteSpace: 'nowrap',
-                  maxWidth: 160,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
+                  fontSize: 11,
+                  padding: "4px 10px",
+                  whiteSpace: "nowrap",
                 }}
               >
                 {t.title}
@@ -220,47 +272,58 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
       {activeThread?.anchor && (
         <div
           style={{
-            margin: '14px 18px 0',
-            padding: '12px 14px',
-            background: 'var(--bg-2)',
+            margin: "14px 18px 0",
+            padding: "12px 14px",
+            background: "var(--bg-2)",
             borderRadius: 6,
-            borderLeft: '2px solid var(--accent)',
+            borderLeft: "2px solid var(--accent)",
             fontFamily: '"Source Serif 4", Georgia, serif',
-            fontStyle: 'italic',
+            fontStyle: "italic",
             fontSize: 13,
-            color: 'var(--ink-2)',
+            color: "var(--ink-2)",
             lineHeight: 1.5,
           }}
         >
-          “{activeThread.anchor.text.slice(0, 180)}{activeThread.anchor.text.length > 180 ? '…' : ''}”
+          “{activeThread.anchor.text.slice(0, 180)}
+          {activeThread.anchor.text.length > 180 ? "…" : ""}”
         </div>
       )}
 
-      {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto" style={{ padding: '18px 22px' }}>
-        {activeThread && activeThread.messages.length === 0 && (
+      {/* Asks list */}
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto"
+        style={{ padding: "18px 22px" }}
+      >
+        {activeThread && asks.length === 0 && !sending && (
           <Greeting onPick={(p) => void submit(p)} />
         )}
-        {activeThread?.messages.map((msg, i) => (
-          <Bubble key={i} msg={msg} />
+        {asks.map((ask, i) => (
+          <AskCard
+            key={i}
+            ask={ask}
+            pending={i === asks.length - 1 && sending && !ask.answer}
+          />
         ))}
-        {sending && <TypingDots />}
+        {sending && asks.length === 0 && (
+          <PendingAsk text={input || pendingPrompt || ""} />
+        )}
       </div>
 
       {/* Composer */}
       <div
         style={{
-          padding: '14px 18px 18px',
-          borderTop: '1px solid var(--rule-2)',
-          background: 'var(--paper)',
+          padding: "14px 18px 18px",
+          borderTop: "1px solid var(--rule-2)",
+          background: "var(--paper)",
         }}
       >
         <div
           className="flex items-end gap-2"
           style={{
-            padding: '8px 8px 8px 14px',
-            background: 'var(--bg)',
-            border: '1px solid var(--rule)',
+            padding: "8px 8px 8px 14px",
+            background: "var(--bg)",
+            border: "1px solid var(--rule)",
             borderRadius: 10,
           }}
         >
@@ -268,24 +331,24 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
+              if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
                 void submit();
               }
             }}
             rows={1}
-            placeholder="Ask about what you're reading…"
+            placeholder="Ask one thing about what you've read…"
             style={{
               flex: 1,
-              resize: 'none',
-              border: 'none',
-              outline: 'none',
-              background: 'transparent',
-              color: 'var(--ink)',
+              resize: "none",
+              border: "none",
+              outline: "none",
+              background: "transparent",
+              color: "var(--ink)",
               fontFamily: '"Source Serif 4", Georgia, serif',
               fontSize: 15,
               lineHeight: 1.5,
-              padding: '6px 0',
+              padding: "6px 0",
               maxHeight: 140,
             }}
           />
@@ -293,47 +356,60 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
             onClick={() => void submit()}
             disabled={!input.trim() || sending}
             style={{
-              all: 'unset',
-              cursor: input.trim() && !sending ? 'pointer' : 'not-allowed',
-              padding: '10px 16px',
+              all: "unset",
+              cursor: input.trim() && !sending ? "pointer" : "not-allowed",
+              padding: "10px 16px",
               borderRadius: 8,
-              display: 'inline-flex',
-              alignItems: 'center',
+              display: "inline-flex",
+              alignItems: "center",
               gap: 8,
-              background: 'var(--accent)',
-              color: '#fff',
+              background: "var(--accent)",
+              color: "#fff",
               fontSize: 13,
               fontWeight: 600,
               opacity: input.trim() && !sending ? 1 : 0.5,
-              transition: 'opacity .15s ease, filter .15s ease',
-              boxShadow: '0 4px 10px -4px rgba(0,0,0,.18)',
+              transition: "opacity .15s ease, filter .15s ease",
+              boxShadow: "0 4px 10px -4px rgba(0,0,0,.18)",
             }}
             aria-label="Send message"
           >
-            <Send size={14} /> Send
+            <Send size={14} /> Ask
           </button>
         </div>
         <div
-          className="text-ink-3 mt-2"
+          className="text-ink-3 mt-2 flex items-center gap-1.5"
           style={{
             fontFamily: '"JetBrains Mono", monospace',
             fontSize: 10,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
+            letterSpacing: "0.06em",
+            textTransform: "uppercase",
           }}
         >
-          Spoiler-safe · Knows up to your current chapter · Shift+Enter for newline
+          <span
+            style={{
+              width: 4,
+              height: 4,
+              borderRadius: 999,
+              background: "var(--accent)",
+            }}
+          />
+          Each ask is independent — answers don't carry across questions
         </div>
       </div>
     </aside>
   );
-};
+}
 
-const Greeting: React.FC<{ onPick: (prompt: string) => void }> = ({ onPick }) => {
+// ─── Sub-components ───────────────────────────────────────────────
+
+function Greeting({ onPick }: { onPick: (prompt: string) => void }) {
   const opts: Array<{ icon: React.ReactNode; label: string }> = [
-    { icon: <Sparkles size={15} />, label: 'Summarize this chapter' },
-    { icon: <Quote size={15} />, label: 'Generate discussion questions' },
-    { icon: <MessageSquare size={15} />, label: 'Explain the key argument simply' },
+    { icon: <Sparkles size={15} />, label: "Summarize what I have read" },
+    { icon: <Quote size={15} />, label: "Generate discussion questions" },
+    {
+      icon: <MessageSquare size={15} />,
+      label: "Explain the central idea simply",
+    },
   ];
   return (
     <div className="pb-4 pt-2">
@@ -345,22 +421,23 @@ const Greeting: React.FC<{ onPick: (prompt: string) => void }> = ({ onPick }) =>
           fontWeight: 600,
           lineHeight: 1.25,
           marginBottom: 6,
-          textWrap: 'pretty',
+          textWrap: "pretty",
         }}
       >
-        What would you like to think about?
+        Ask me one thing.
       </h3>
       <p
         style={{
           fontFamily: '"Source Serif 4", Georgia, serif',
-          fontStyle: 'italic',
+          fontStyle: "italic",
           fontSize: 14,
-          color: 'var(--ink-2)',
+          color: "var(--ink-2)",
           marginBottom: 18,
           lineHeight: 1.5,
         }}
       >
-        I have only the chapters you've read so far — I won't spoil what's ahead.
+        I have only the chapters you've read so far — and I treat every question
+        as a fresh ask.
       </p>
       <div className="flex flex-col gap-1.5">
         {opts.map((o) => (
@@ -368,91 +445,116 @@ const Greeting: React.FC<{ onPick: (prompt: string) => void }> = ({ onPick }) =>
             key={o.label}
             onClick={() => onPick(o.label)}
             style={{
-              all: 'unset',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
+              all: "unset",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
               gap: 12,
-              padding: '12px 14px',
-              background: 'var(--bg-2)',
+              padding: "12px 14px",
+              background: "var(--bg-2)",
               borderRadius: 6,
-              border: '1px solid var(--rule-2)',
+              border: "1px solid var(--rule-2)",
               fontFamily: '"Source Serif 4", Georgia, serif',
               fontSize: 14,
-              color: 'var(--ink-2)',
+              color: "var(--ink-2)",
             }}
           >
-            <span style={{ color: 'var(--accent)' }}>{o.icon}</span> {o.label}
+            <span style={{ color: "var(--accent)" }}>{o.icon}</span> {o.label}
           </button>
         ))}
       </div>
     </div>
   );
-};
+}
 
-const Bubble: React.FC<{ msg: ChatMessage }> = ({ msg }) => {
-  const isUser = msg.role === 'user';
+function AskCard({ ask, pending }: { ask: Ask; pending: boolean }) {
   return (
     <div
+      className="card"
       style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: isUser ? 'flex-end' : 'flex-start',
-        gap: 4,
         marginBottom: 14,
+        padding: 0,
+        overflow: "hidden",
+        borderRadius: 10,
       }}
     >
-      {msg.anchor && !isUser && (
-        <div
-          style={{
-            fontFamily: '"JetBrains Mono", monospace',
-            fontSize: 10,
-            color: 'var(--ink-3)',
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-          }}
-        >
-          Replying about your selection
-        </div>
-      )}
+      {/* Question */}
       <div
         style={{
-          maxWidth: '88%',
-          padding: isUser ? '10px 14px' : '4px 0',
-          background: isUser ? 'var(--bg-2)' : 'transparent',
-          border: isUser ? '1px solid var(--rule-2)' : 'none',
-          borderRadius: isUser ? 14 : 0,
-          fontFamily: '"Source Serif 4", Georgia, serif',
-          fontSize: 15,
-          lineHeight: 1.55,
-          color: 'var(--ink)',
-          whiteSpace: 'pre-wrap',
-          textWrap: 'pretty',
+          padding: "10px 14px 8px",
+          borderBottom: "1px solid var(--rule-2)",
+          background: "color-mix(in oklab, var(--accent) 5%, transparent)",
         }}
       >
-        {msg.text}
+        <div
+          className="kicker"
+          style={{ fontSize: 10, color: "var(--accent)", marginBottom: 4 }}
+        >
+          Ask
+        </div>
+        <div
+          style={{
+            fontFamily: '"Source Serif 4", Georgia, serif',
+            fontSize: 15,
+            fontWeight: 600,
+            color: "var(--ink)",
+            lineHeight: 1.4,
+            textWrap: "pretty",
+          }}
+        >
+          {ask.question.text}
+        </div>
+      </div>
+      {/* Answer */}
+      <div style={{ padding: "12px 14px 14px" }}>
+        <div className="kicker" style={{ fontSize: 10, marginBottom: 6 }}>
+          Answer
+        </div>
+        {pending || !ask.answer ? (
+          <TypingDots />
+        ) : (
+          <div className="ask-answer">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {ask.answer.text}
+            </ReactMarkdown>
+          </div>
+        )}
       </div>
     </div>
   );
-};
+}
 
-const TypingDots: React.FC = () => (
-  <div className="flex items-center gap-1 py-1" style={{ color: 'var(--ink-3)' }}>
-    {[0, 0.2, 0.4].map((delay) => (
-      <span
-        key={delay}
-        className="animate-dot-pulse"
-        style={{
-          width: 6,
-          height: 6,
-          borderRadius: '50%',
-          background: 'currentColor',
-          display: 'inline-block',
-          animationDelay: `${delay}s`,
-        }}
-      />
-    ))}
-  </div>
-);
+function PendingAsk({ text }: { text: string }) {
+  return (
+    <AskCard
+      ask={{ question: { role: "user", text: text || "…" }, answer: null }}
+      pending={true}
+    />
+  );
+}
+
+function TypingDots() {
+  return (
+    <div
+      className="flex items-center gap-1 py-1"
+      style={{ color: "var(--ink-3)" }}
+    >
+      {[0, 0.2, 0.4].map((delay) => (
+        <span
+          key={delay}
+          className="animate-dot-pulse"
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: "50%",
+            background: "currentColor",
+            display: "inline-block",
+            animationDelay: `${delay}s`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
 export default ChatPanel;

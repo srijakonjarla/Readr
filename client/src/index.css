@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;500&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -6,58 +6,61 @@
 
 /* ───────── Theme tokens (Modern direction) ───────── */
 :root {
-  --bg: #F6F1E7;
-  --bg-2: #EEE7D6;
-  --paper: #FBF6EA;
-  --ink: #1F1812;
-  --ink-2: #4A3F32;
-  --ink-3: #8B7C66;
-  --ink-4: #B5A78F;
-  --rule: #C9B996;
-  --rule-2: #E0D4B7;
-  --accent: #8B3A1C;       /* deep rust / sienna */
-  --accent-2: #2D5039;     /* moss green secondary */
-  --accent-soft: #EBD9C4;
+  --bg: #f6f1e7;
+  --bg-2: #eee7d6;
+  --paper: #fbf6ea;
+  --ink: #1f1812;
+  --ink-2: #4a3f32;
+  --ink-3: #8b7c66;
+  --ink-4: #b5a78f;
+  --rule: #c9b996;
+  --rule-2: #e0d4b7;
+  --accent: #8b3a1c; /* deep rust / sienna */
+  --accent-2: #2d5039; /* moss green secondary */
+  --accent-soft: #ebd9c4;
   --reading-width: 640px;
   --reading-size: 19px;
   --reading-leading: 1.7;
 }
 
-[data-theme='sepia'] {
-  --bg: #F4ECD7;
-  --bg-2: #ECE2C6;
-  --paper: #FAF3DD;
-  --ink: #1F1812;
-  --ink-2: #5A4A30;
-  --ink-3: #8A7551;
-  --rule: #CFBE99;
-  --rule-2: #DCCEAB;
+[data-theme="sepia"] {
+  --bg: #f4ecd7;
+  --bg-2: #ece2c6;
+  --paper: #faf3dd;
+  --ink: #1f1812;
+  --ink-2: #5a4a30;
+  --ink-3: #8a7551;
+  --rule: #cfbe99;
+  --rule-2: #dcceab;
 }
 
-[data-theme='dark'] {
-  --bg: #0E0D0B;
+[data-theme="dark"] {
+  --bg: #0e0d0b;
   --bg-2: #181712;
-  --paper: #14130F;
-  --ink: #F1ECDD;
-  --ink-2: #B8B2A0;
-  --ink-3: #7A7466;
-  --ink-4: #56503F;
-  --rule: #2A2820;
-  --rule-2: #211F19;
-  --accent-soft: #3A2F18;
+  --paper: #14130f;
+  --ink: #f1ecdd;
+  --ink-2: #b8b2a0;
+  --ink-3: #7a7466;
+  --ink-4: #56503f;
+  --rule: #2a2820;
+  --rule-2: #211f19;
+  --accent-soft: #3a2f18;
 }
 
 /* ───────── Base ───────── */
 @layer base {
-  html, body {
+  html,
+  body {
     margin: 0;
     padding: 0;
   }
   body {
     @apply bg-bg text-ink antialiased;
-    font-family: 'Inter Tight', ui-sans-serif, system-ui, sans-serif;
-    font-feature-settings: 'cv11', 'ss01';
-    transition: background-color 0.35s ease, color 0.35s ease;
+    font-family: "Inter Tight", ui-sans-serif, system-ui, sans-serif;
+    font-feature-settings: "cv11", "ss01";
+    transition:
+      background-color 0.35s ease,
+      color 0.35s ease;
   }
   ::selection {
     background: color-mix(in oklab, var(--accent) 30%, transparent);
@@ -69,18 +72,24 @@
   }
   /* Subtle paper grain */
   body::before {
-    content: '';
+    content: "";
     position: fixed;
     inset: 0;
     pointer-events: none;
     z-index: 0;
     opacity: 0.35;
-    background-image: radial-gradient(rgba(31, 27, 22, 0.025) 1px, transparent 1px);
+    background-image: radial-gradient(
+      rgba(31, 27, 22, 0.025) 1px,
+      transparent 1px
+    );
     background-size: 3px 3px;
   }
-  [data-theme='dark'] body::before {
+  [data-theme="dark"] body::before {
     opacity: 0.2;
-    background-image: radial-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+    background-image: radial-gradient(
+      rgba(255, 255, 255, 0.025) 1px,
+      transparent 1px
+    );
   }
   #root {
     position: relative;
@@ -102,7 +111,9 @@
     display: inline-flex;
     align-items: center;
     gap: 0;
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) inset, 0 8px 24px -10px rgba(31, 27, 22, 0.18);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.5) inset,
+      0 8px 24px -10px rgba(31, 27, 22, 0.18);
     color: var(--ink-2);
   }
   .pill-btn {
@@ -114,7 +125,9 @@
     align-items: center;
     justify-content: center;
     color: var(--ink-2);
-    transition: background-color 0.15s ease, color 0.15s ease;
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease;
   }
   .pill-btn:hover {
     background: color-mix(in oklab, var(--ink) 6%, transparent);
@@ -136,12 +149,14 @@
     font-size: 13px;
     font-weight: 500;
     color: var(--ink-3);
-    transition: background-color 0.15s ease, color 0.15s ease;
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease;
   }
   .nav-chip:hover {
     color: var(--ink-2);
   }
-  .nav-chip[aria-selected='true'] {
+  .nav-chip[aria-pressed="true"] {
     background: var(--bg-2);
     color: var(--ink);
   }
@@ -210,15 +225,22 @@
     background: var(--paper);
     border-radius: 14px;
     border: 1px solid var(--rule-2);
-    transition: background-color 0.15s ease, transform 0.15s ease, box-shadow 0.25s ease;
+    transition:
+      background-color 0.15s ease,
+      transform 0.15s ease,
+      box-shadow 0.25s ease;
   }
   .card-hero {
     background: var(--paper);
     border-radius: 20px;
     border: 1px solid var(--rule-2);
     overflow: hidden;
-    box-shadow: 0 1px 0 rgba(31, 27, 22, 0.04), 0 24px 60px -30px rgba(31, 27, 22, 0.18);
-    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    box-shadow:
+      0 1px 0 rgba(31, 27, 22, 0.04),
+      0 24px 60px -30px rgba(31, 27, 22, 0.18);
+    transition:
+      transform 0.25s ease,
+      box-shadow 0.25s ease;
   }
   .card-hero:hover {
     transform: translateY(-3px);
@@ -287,7 +309,7 @@
 
 /* Reading column body styling — applied to dangerouslySetInnerHTML container */
 .reading-body {
-  font-family: 'Source Serif 4', 'Iowan Old Style', Georgia, serif;
+  font-family: "Source Serif 4", "Iowan Old Style", Georgia, serif;
   font-size: var(--reading-size);
   line-height: var(--reading-leading);
   color: var(--ink);
@@ -299,7 +321,7 @@
 .reading-body h1,
 .reading-body h2,
 .reading-body h3 {
-  font-family: 'Inter Tight', ui-sans-serif, system-ui, sans-serif;
+  font-family: "Inter Tight", ui-sans-serif, system-ui, sans-serif;
   letter-spacing: -0.02em;
   margin: 1.6em 0 0.4em;
   color: var(--ink);
@@ -320,4 +342,114 @@
   color: var(--accent);
   text-decoration: underline;
   text-underline-offset: 2px;
+}
+
+/* Markdown rendering inside ask answers */
+.ask-answer {
+  font-family: "Source Serif 4", "Iowan Old Style", Georgia, serif;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+.ask-answer > *:first-child {
+  margin-top: 0;
+}
+.ask-answer > *:last-child {
+  margin-bottom: 0;
+}
+.ask-answer p {
+  margin: 0 0 0.85em 0;
+}
+.ask-answer strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+.ask-answer em {
+  font-style: italic;
+}
+.ask-answer ul,
+.ask-answer ol {
+  margin: 0 0 0.85em 0;
+  padding-left: 1.4em;
+}
+.ask-answer li {
+  margin-bottom: 0.3em;
+}
+.ask-answer li > p {
+  margin: 0;
+}
+.ask-answer h1,
+.ask-answer h2,
+.ask-answer h3 {
+  font-family: "Inter Tight", ui-sans-serif, system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 1em 0 0.4em;
+  color: var(--ink);
+}
+.ask-answer h1 {
+  font-size: 18px;
+}
+.ask-answer h2 {
+  font-size: 16px;
+}
+.ask-answer h3 {
+  font-size: 15px;
+}
+.ask-answer blockquote {
+  margin: 0.5em 0;
+  padding-left: 12px;
+  border-left: 2px solid var(--rule);
+  color: var(--ink-2);
+  font-style: italic;
+}
+.ask-answer code {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.85em;
+  padding: 1px 5px;
+  background: var(--bg-2);
+  border-radius: 4px;
+  color: var(--ink);
+}
+.ask-answer pre {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 12px 14px;
+  background: var(--bg-2);
+  border: 1px solid var(--rule-2);
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 0.5em 0;
+}
+.ask-answer pre code {
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+}
+.ask-answer hr {
+  border: none;
+  border-top: 1px solid var(--rule-2);
+  margin: 1em 0;
+}
+.ask-answer a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.ask-answer table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.5em 0;
+  font-size: 13px;
+}
+.ask-answer th,
+.ask-answer td {
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--rule-2);
+}
+.ask-answer th {
+  font-weight: 600;
 }

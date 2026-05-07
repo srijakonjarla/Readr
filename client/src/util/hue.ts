@@ -26,7 +26,7 @@ export function bookGradient(hue: number): string {
     `radial-gradient(circle at 80% 20%, oklch(0.65 0.14 ${hue} / .35), transparent 55%)`,
     `radial-gradient(circle at 20% 80%, oklch(0.45 0.10 ${hue} / .55), transparent 60%)`,
     `linear-gradient(135deg, oklch(0.32 0.07 ${hue}), oklch(0.18 0.05 ${hue}))`,
-  ].join(', ');
+  ].join(", ");
 }
 
 export function miniGradient(hue: number): string {
@@ -58,5 +58,5 @@ export function heroStripGradient(hue: number): string {
     `radial-gradient(circle at 0% 50%, oklch(0.72 0.16 ${hue} / 0.55), transparent 55%)`,
     `radial-gradient(circle at 100% 50%, oklch(0.66 0.18 ${hue} / 0.45), transparent 60%)`,
     `linear-gradient(135deg, oklch(0.88 0.07 ${hue}), oklch(0.83 0.08 ${hue}))`,
-  ].join(', ');
+  ].join(", ");
 }

@@ -1,52 +1,56 @@
-import React, { useState, useRef } from 'react';
-import { Upload } from 'lucide-react';
+import React, { useState, useRef } from "react";
+import { Upload } from "lucide-react";
 
 interface UploadSectionProps {
   onUploadSuccess: () => void;
 }
 
-const UploadSection: React.FC<UploadSectionProps> = ({ onUploadSuccess }) => {
+function UploadSection({ onUploadSuccess }: UploadSectionProps) {
   const [uploading, setUploading] = useState<boolean>(false);
-  const [fileName, setFileName] = useState<string>('');
+  const [fileName, setFileName] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleUpload = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
+  const handleUpload = async (
+    e: React.FormEvent<HTMLFormElement>,
+  ): Promise<void> => {
     e.preventDefault();
 
     const fileInput = fileInputRef.current;
     const file = fileInput?.files?.[0];
     if (!file) {
-      alert('Please select a file first.');
+      alert("Please select a file first.");
       return;
     }
 
     setUploading(true);
 
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append("file", file);
 
     try {
-      const response = await fetch('/api/upload', {
-        method: 'POST',
+      const response = await fetch("/api/upload", {
+        method: "POST",
         body: formData,
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        throw new Error(
+          errorData.error || `HTTP error! status: ${response.status}`,
+        );
       }
 
       await response.json();
 
       if (fileInput) {
-        fileInput.value = '';
+        fileInput.value = "";
       }
-      setFileName('');
+      setFileName("");
 
       onUploadSuccess();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Error uploading file:', error);
+      const message = error instanceof Error ? error.message : "Unknown error";
+      console.error("Error uploading file:", error);
       alert(`Error uploading file: ${message}`);
     } finally {
       setUploading(false);
@@ -62,7 +66,7 @@ const UploadSection: React.FC<UploadSectionProps> = ({ onUploadSuccess }) => {
             fontFamily: '"Source Serif 4", Georgia, serif',
             fontSize: 28,
             fontWeight: 600,
-            letterSpacing: '-0.01em',
+            letterSpacing: "-0.01em",
           }}
         >
           Add a book
@@ -75,13 +79,16 @@ const UploadSection: React.FC<UploadSectionProps> = ({ onUploadSuccess }) => {
           <label
             className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-6 py-12 text-center transition-colors"
             style={{
-              borderColor: 'var(--rule)',
-              background: 'var(--bg-2)',
+              borderColor: "var(--rule)",
+              background: "var(--bg-2)",
             }}
           >
             <Upload size={32} className="text-accent" strokeWidth={1.5} />
-            <span className="text-ink" style={{ fontSize: 14, fontWeight: 600 }}>
-              {fileName || 'Click to choose an EPUB'}
+            <span
+              className="text-ink"
+              style={{ fontSize: 14, fontWeight: 600 }}
+            >
+              {fileName || "Click to choose an EPUB"}
             </span>
             <span className="text-ink-3" style={{ fontSize: 12 }}>
               .epub files only
@@ -91,17 +98,21 @@ const UploadSection: React.FC<UploadSectionProps> = ({ onUploadSuccess }) => {
               ref={fileInputRef}
               accept=".epub"
               className="sr-only"
-              onChange={(e) => setFileName(e.target.files?.[0]?.name ?? '')}
+              onChange={(e) => setFileName(e.target.files?.[0]?.name ?? "")}
             />
           </label>
 
-          <button type="submit" disabled={uploading || !fileName} className="btn-cta w-full justify-center">
-            {uploading ? 'Uploading…' : 'Upload'}
+          <button
+            type="submit"
+            disabled={uploading || !fileName}
+            className="btn-cta w-full justify-center"
+          >
+            {uploading ? "Uploading…" : "Upload"}
           </button>
         </form>
       </div>
     </section>
   );
-};
+}
 
 export default UploadSection;

@@ -24,9 +24,9 @@ export interface BookInfo {
   toc: TocItem[];
 }
 
-export type Provider = 'openai' | 'claude';
+export type Provider = "openai" | "claude";
 
-export type ActiveSection = 'upload' | 'library' | 'preview' | 'reader';
+export type ActiveSection = "upload" | "library" | "preview" | "reader";
 
 export interface ChatRequest {
   query: string;
@@ -40,7 +40,7 @@ export interface ChatResponse {
   response: string;
 }
 
-export type HighlightKind = 'highlight' | 'thread';
+export type HighlightKind = "highlight" | "thread";
 
 export interface Highlight {
   id: string;
@@ -52,7 +52,7 @@ export interface Highlight {
 }
 
 export interface ChatMessage {
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   text: string;
   anchor?: boolean;
 }
