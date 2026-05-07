@@ -20,6 +20,7 @@ const upload = multer({ storage });
 router.post("/upload", upload.single("file"), fileController.uploadFile);
 router.get("/files/:filename", fileController.getFile);
 router.get("/epub/:filename/chapter/:chapterId", fileController.getEpubChapter);
+router.get("/epub/:filename/asset/:assetId", fileController.getEpubAsset);
 router.get("/books", fileController.getBooks);
 router.post("/chat", fileController.handleChatQuery);
 

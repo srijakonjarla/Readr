@@ -151,6 +151,34 @@ function App(): React.ReactElement {
     void chapterTitle;
   };
 
+  const clearThread = (threadId: string): void => {
+    if (!currentBook) return;
+    setThreads((prev) => {
+      const existing = prev[currentBook.filename] ?? [];
+      return {
+        ...prev,
+        [currentBook.filename]: existing.map((t) =>
+          t.id === threadId ? { ...t, messages: [] } : t,
+        ),
+      };
+    });
+  };
+
+  const removeLastMessage = (threadId: string): void => {
+    if (!currentBook) return;
+    setThreads((prev) => {
+      const existing = prev[currentBook.filename] ?? [];
+      return {
+        ...prev,
+        [currentBook.filename]: existing.map((t) =>
+          t.id === threadId
+            ? { ...t, messages: t.messages.slice(0, -1) }
+            : t,
+        ),
+      };
+    });
+  };
+
   const appendMessage = (threadId: string, msg: ChatMessage): void => {
     if (!currentBook) return;
     setThreads((prev) => {
@@ -285,6 +313,8 @@ function App(): React.ReactElement {
           activeThreadId={activeThreadId}
           onSwitchThread={setActiveThreadId}
           onAppendMessage={appendMessage}
+          onClearThread={clearThread}
+          onRemoveLastMessage={removeLastMessage}
           pendingPrompt={pendingPrompt}
           clearPendingPrompt={() => setPendingPrompt(null)}
           currentChapterIndex={readerChapterIndex}

@@ -52,6 +52,60 @@ async function loadEpub(filePath: string, timeoutMs = 15000): Promise<EPub> {
   return epub;
 }
 
+// Strip <link rel="stylesheet"> and <style> tags so the EPUB's own CSS can't
+// override the reader's typography.
+function stripEpubStyles(html: string): string {
+  return html
+    .replace(/<link\b[^>]*rel=["']?stylesheet["']?[^>]*>/gi, "")
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, "");
+}
+
+// Build a lookup from manifest href (and basename) → manifest id, so we can
+// resolve relative <img src="..."> paths back to a getImage(id) call.
+function buildHrefToId(epub: EPub): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const id of Object.keys(epub.manifest)) {
+    const item = epub.manifest[id];
+    if (!item || typeof item.href !== "string") continue;
+    const href = item.href;
+    map[href] = id;
+    map[href.toLowerCase()] = id;
+    const basename = href.split("/").pop();
+    if (basename) {
+      map[basename] = id;
+      map[basename.toLowerCase()] = id;
+    }
+  }
+  return map;
+}
+
+function rewriteImageSources(
+  html: string,
+  hrefToId: Record<string, string>,
+  filename: string,
+): string {
+  const filenameEnc = encodeURIComponent(filename);
+  return html.replace(
+    /(<img\b[^>]*?\bsrc=)(['"])([^'"]+)\2/gi,
+    (match, prefix: string, quote: string, src: string) => {
+      try {
+        const decoded = decodeURIComponent(src);
+        const cleanSrc = decoded.replace(/^\.\.?\//, "").replace(/^\//, "");
+        const basename = cleanSrc.split("/").pop() ?? "";
+        const id =
+          hrefToId[cleanSrc] ??
+          hrefToId[cleanSrc.toLowerCase()] ??
+          hrefToId[basename] ??
+          hrefToId[basename.toLowerCase()];
+        if (!id) return match;
+        return `${prefix}${quote}/api/epub/${filenameEnc}/asset/${encodeURIComponent(id)}${quote}`;
+      } catch {
+        return match;
+      }
+    },
+  );
+}
+
 export const uploadFile = async (
   req: Request,
   res: Response,
@@ -146,7 +200,10 @@ export const getEpubChapter = async (
 
   try {
     const epub = await loadEpub(filePath);
-    const text = await epub.getChapter(chapterId);
+    const rawText = await epub.getChapter(chapterId);
+    const stripped = stripEpubStyles(rawText || "");
+    const hrefToId = buildHrefToId(epub);
+    const text = rewriteImageSources(stripped, hrefToId, filename);
     console.log(
       `[getEpubChapter] Retrieved chapter ID ${chapterId}. Content length: ${text ? text.length : 0}`,
     );
@@ -158,6 +215,41 @@ export const getEpubChapter = async (
       res
         .status(500)
         .json({ error: `Failed to get chapter content for ID: ${chapterId}` });
+    }
+  }
+};
+
+export const getEpubAsset = async (
+  req: Request<{ filename: string; assetId: string }>,
+  res: Response,
+): Promise<void> => {
+  const { filename, assetId } = req.params;
+  const filePath = path.join(UPLOADS_DIR, filename);
+
+  if (!fsSync.existsSync(filePath)) {
+    res.status(404).end();
+    return;
+  }
+
+  try {
+    const epub = await loadEpub(filePath);
+    let asset: { data: Buffer; mimeType: string };
+    try {
+      asset = await epub.getImage(assetId);
+    } catch {
+      // Fall back to generic file fetcher (covers fonts, svg, etc.)
+      asset = await epub.getFile(assetId);
+    }
+    res.setHeader("Content-Type", asset.mimeType || "application/octet-stream");
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    res.send(asset.data);
+  } catch (error) {
+    console.error(
+      `[getEpubAsset] failed to fetch asset ${assetId} from ${filename}:`,
+      error,
+    );
+    if (!res.headersSent) {
+      res.status(404).end();
     }
   }
 };

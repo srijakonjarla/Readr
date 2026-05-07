@@ -78,10 +78,10 @@ Strict rules:
       );
 
       const response = await openai.responses.create({
-        model: "gpt-4.1-mini",
+        model: "gpt-5.4",
         input: userInput,
         instructions: systemInstructions,
-        max_output_tokens: 500,
+        max_output_tokens: 4096,
         temperature: 0.5,
       });
 

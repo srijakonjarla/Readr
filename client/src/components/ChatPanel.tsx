@@ -1,5 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { X, Sparkles, Send, Quote, MessageSquare } from "lucide-react";
+import {
+  X,
+  Sparkles,
+  Send,
+  Quote,
+  MessageSquare,
+  RotateCcw,
+  Trash2,
+} from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Book, ChatMessage, Provider, Thread } from "../types";
@@ -12,6 +20,8 @@ interface ChatPanelProps {
   activeThreadId: string;
   onSwitchThread: (id: string) => void;
   onAppendMessage: (threadId: string, msg: ChatMessage) => void;
+  onClearThread: (threadId: string) => void;
+  onRemoveLastMessage: (threadId: string) => void;
   pendingPrompt: string | null;
   clearPendingPrompt: () => void;
   /** Current chapter the reader is on; used as the spoiler cutoff for un-anchored asks. */
@@ -51,12 +61,14 @@ function ChatPanel({
   activeThreadId,
   onSwitchThread,
   onAppendMessage,
+  onClearThread,
+  onRemoveLastMessage,
   pendingPrompt,
   clearPendingPrompt,
   currentChapterIndex,
 }: ChatPanelProps) {
   const [input, setInput] = useState<string>("");
-  const [provider, setProvider] = useState<Provider>("claude");
+  const [provider, setProvider] = useState<Provider>("openai");
   const [sending, setSending] = useState<boolean>(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -73,11 +85,16 @@ function ChatPanel({
     }
   }, [activeThread, sending, open]);
 
-  const submit = async (textArg?: string): Promise<void> => {
+  const submit = async (
+    textArg?: string,
+    options?: { skipUserAppend?: boolean },
+  ): Promise<void> => {
     const text = (textArg ?? input).trim();
     if (!text || !activeThread) return;
     setInput("");
-    onAppendMessage(activeThread.id, { role: "user", text });
+    if (!options?.skipUserAppend) {
+      onAppendMessage(activeThread.id, { role: "user", text });
+    }
     setSending(true);
 
     try {
@@ -116,6 +133,19 @@ function ChatPanel({
     } finally {
       setSending(false);
     }
+  };
+
+  // Regenerate the last answer: drop the existing assistant message and
+  // re-ask the same question (without re-appending the user message).
+  const regenerateLast = (): void => {
+    if (!activeThread || sending) return;
+    const last = activeThread.messages[activeThread.messages.length - 1];
+    const prev = activeThread.messages[activeThread.messages.length - 2];
+    if (!last || last.role !== "assistant" || !prev || prev.role !== "user") {
+      return;
+    }
+    onRemoveLastMessage(activeThread.id);
+    void submit(prev.text, { skipUserAppend: true });
   };
 
   // Auto-fire pending prompt (e.g., from "Ask" selection action)
@@ -201,6 +231,44 @@ function ChatPanel({
         </button>
       </div>
 
+      {/* Toolbar (Clear) */}
+      {asks.length > 0 && activeThread && (
+        <div
+          className="flex items-center justify-end gap-2 px-5 py-1.5"
+          style={{ borderBottom: "1px solid var(--rule-2)" }}
+        >
+          <button
+            onClick={() => {
+              if (sending) return;
+              if (
+                window.confirm(
+                  "Clear all asks in this context? Anchored selection (if any) will be kept.",
+                )
+              ) {
+                onClearThread(activeThread.id);
+              }
+            }}
+            disabled={sending}
+            style={{
+              all: "unset",
+              cursor: sending ? "not-allowed" : "pointer",
+              opacity: sending ? 0.5 : 1,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "4px 10px",
+              borderRadius: 999,
+              fontSize: 11,
+              fontWeight: 500,
+              color: "var(--ink-3)",
+            }}
+            title="Clear all asks in this context"
+          >
+            <Trash2 size={12} /> Clear
+          </button>
+        </div>
+      )}
+
       {/* Provider toggle */}
       <div
         className="flex items-center gap-2 px-5 py-2"
@@ -218,16 +286,16 @@ function ChatPanel({
           aria-pressed={provider === "openai"}
           style={{ fontSize: 11, padding: "4px 10px" }}
         >
-          GPT-4.1-mini
+          GPT-5.4
         </button>
-        <button
+        {/* <button
           onClick={() => setProvider("claude")}
           className="nav-chip"
           aria-pressed={provider === "claude"}
           style={{ fontSize: 11, padding: "4px 10px" }}
         >
           Claude Sonnet 4.6
-        </button>
+        </button> */}
       </div>
 
       {/* Context (formerly thread tabs) */}
@@ -298,13 +366,19 @@ function ChatPanel({
         {activeThread && asks.length === 0 && !sending && (
           <Greeting onPick={(p) => void submit(p)} />
         )}
-        {asks.map((ask, i) => (
-          <AskCard
-            key={i}
-            ask={ask}
-            pending={i === asks.length - 1 && sending && !ask.answer}
-          />
-        ))}
+        {asks.map((ask, i) => {
+          const isLast = i === asks.length - 1;
+          return (
+            <AskCard
+              key={i}
+              ask={ask}
+              pending={isLast && sending && !ask.answer}
+              onRegenerate={
+                isLast && !sending && ask.answer ? regenerateLast : undefined
+              }
+            />
+          );
+        })}
         {sending && asks.length === 0 && (
           <PendingAsk text={input || pendingPrompt || ""} />
         )}
@@ -467,7 +541,15 @@ function Greeting({ onPick }: { onPick: (prompt: string) => void }) {
   );
 }
 
-function AskCard({ ask, pending }: { ask: Ask; pending: boolean }) {
+function AskCard({
+  ask,
+  pending,
+  onRegenerate,
+}: {
+  ask: Ask;
+  pending: boolean;
+  onRegenerate?: () => void;
+}) {
   return (
     <div
       className="card"
@@ -507,8 +589,33 @@ function AskCard({ ask, pending }: { ask: Ask; pending: boolean }) {
       </div>
       {/* Answer */}
       <div style={{ padding: "12px 14px 14px" }}>
-        <div className="kicker" style={{ fontSize: 10, marginBottom: 6 }}>
-          Answer
+        <div
+          className="flex items-center justify-between"
+          style={{ marginBottom: 6 }}
+        >
+          <div className="kicker" style={{ fontSize: 10 }}>
+            Answer
+          </div>
+          {onRegenerate && (
+            <button
+              onClick={onRegenerate}
+              style={{
+                all: "unset",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                padding: "2px 8px",
+                borderRadius: 999,
+                fontSize: 11,
+                fontWeight: 500,
+                color: "var(--ink-3)",
+              }}
+              title="Re-ask the same question"
+            >
+              <RotateCcw size={11} /> Regenerate
+            </button>
+          )}
         </div>
         {pending || !ask.answer ? (
           <TypingDots />
