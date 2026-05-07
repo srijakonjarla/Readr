@@ -1,7 +1,6 @@
-// API service for making requests to the backend
+import type { Book, BookInfo, ChatRequest, ChatResponse } from '../types';
 
-// Get all books
-export const getBooks = async () => {
+export const getBooks = async (): Promise<Book[]> => {
   const response = await fetch('/api/books');
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
@@ -9,8 +8,7 @@ export const getBooks = async () => {
   return response.json();
 };
 
-// Get book details
-export const getBookDetails = async (filename) => {
+export const getBookDetails = async (filename: string): Promise<BookInfo> => {
   const response = await fetch(`/api/files/${filename}`);
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
@@ -18,26 +16,24 @@ export const getBookDetails = async (filename) => {
   return response.json();
 };
 
-// Upload a book
-export const uploadBook = async (file) => {
+export const uploadBook = async (file: File): Promise<{ message: string; file: string }> => {
   const formData = new FormData();
   formData.append('file', file);
-  
+
   const response = await fetch('/api/upload', {
     method: 'POST',
-    body: formData
+    body: formData,
   });
-  
+
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
   }
-  
+
   return response.json();
 };
 
-// Get chapter content
-export const getChapterContent = async (filename, chapterId) => {
+export const getChapterContent = async (filename: string, chapterId: string): Promise<string> => {
   const response = await fetch(`/api/epub/${filename}/chapter/${chapterId}`);
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
@@ -45,24 +41,19 @@ export const getChapterContent = async (filename, chapterId) => {
   return response.text();
 };
 
-// Submit chat query
-export const submitChatQuery = async (query, context, filename) => {
+export const submitChatQuery = async (request: ChatRequest): Promise<ChatResponse> => {
   const response = await fetch('/api/chat', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      query,
-      context,
-      filename
-    }),
+    body: JSON.stringify(request),
   });
-  
+
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
   }
-  
+
   return response.json();
 };

@@ -2,57 +2,74 @@
 A web application for reading EPUB books with AI-powered chat features.
 
 ## Project Structure
-- `client/` - React frontend application
-- `server/` - Node.js Express backend
-- `uploads/` - Directory for uploaded EPUB files
+- `client/` - React frontend (TypeScript, Create React App)
+- `server/` - Node.js + Express backend (TypeScript)
+- `uploads/` - Uploaded EPUB files
 - `samples/` - Sample EPUB files for testing
 
-## Setup Instructions
+## Setup
 
-### Docker Setup (Recommended)
-The easiest way to run the application is using Docker Compose:
-
-```bash
-# Build and start all services
-docker-compose up --build
-
-# To run in detached mode
-docker-compose up --build -d
+### 1. Environment variables
+Create a `.env` file in the project root with API keys for whichever providers you want to use:
+```
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-The application will be available at http://localhost:3000
-
-### Manual Setup
-
-#### Install Backend Dependencies
+### 2. Install dependencies
 ```bash
+# Backend (root)
 npm install
+
+# Frontend
+cd client && npm install && cd ..
 ```
 
-#### Install Frontend Dependencies
-```bash
-npm run client-install
-```
+### 3. Run in development
+Open two terminals.
 
-#### Run the Application in Development Mode
-This will start both the backend server and the React frontend concurrently:
+**Terminal 1 — backend** (Express on port 5001, hot-reloads via `tsx watch`):
 ```bash
 npm run dev
 ```
 
-The backend API will run on port 5000, and the React frontend will run on port 3000.
+**Terminal 2 — frontend** (CRA dev server on port 3000, proxies API to 5001):
+```bash
+cd client && npm start
+```
+
+Open http://localhost:3000.
+
+### Type checking
+```bash
+npm run typecheck         # server
+cd client && npx tsc --noEmit   # client
+```
+
+### Production build
+```bash
+npm run build      # compiles server to dist/
+npm start          # runs node dist/app.js
+
+cd client && npm run build   # builds static frontend
+```
+
+### Docker
+```bash
+docker-compose up --build
+```
 
 ## API Endpoints
 - `POST /api/upload` - Upload an EPUB file
-- `GET /api/books` - Get all books in the library
-- `GET /api/files/:filename` - Get metadata for a specific book
-- `GET /api/epub/:filename/chapter/:chapterId` - Get chapter content
-- `POST /api/chat` - Submit a chat query about the book content
+- `GET /api/books` - List all books in the library
+- `GET /api/files/:filename` - Get metadata + table of contents for a book
+- `GET /api/epub/:filename/chapter/:chapterId` - Get chapter HTML
+- `POST /api/chat` - Submit a chat query. Body: `{ query, context, filename, currentChapterIndex, provider }` where `provider` is `"openai"` or `"claude"`.
 
 ## Features
-- Upload and manage EPUB books
-- View book metadata
-- Navigate through chapters
-- Adjust font size
-- Toggle dark/light theme
-- AI-powered chat for asking questions about the book content
+- Upload and browse EPUB books
+- Read by chapter with adjustable font size and dark/light theme
+- AI-powered chat:
+  - **Spoiler-safe**: only chapters up to your current reading position are sent to the model
+  - **Provider toggle**: OpenAI (GPT-4.1-mini) or Claude (Sonnet 4.6)
+  - Claude requests use prompt caching for fast/cheap follow-up questions on the same chapter

@@ -1,9 +1,1 @@
-.container {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.hidden {
-  display: none;
-}
+/* legacy file kept empty; component styles live in Tailwind utilities */
