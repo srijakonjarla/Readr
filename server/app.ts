@@ -2,6 +2,7 @@ import express, { type ErrorRequestHandler } from "express";
 import path from "path";
 import fs from "fs";
 import "dotenv/config";
+import "./db"; // initializes SQLite + runs schema migration
 import routes from "./routes";
 
 const app = express();

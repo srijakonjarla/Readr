@@ -21,7 +21,9 @@ function MetadataPreview({
     const fetchBookDetails = async (): Promise<void> => {
       setLoading(true);
       try {
-        const response = await fetch(`/api/files/${book.filename}`);
+        const response = await fetch(
+          `/api/files/${encodeURIComponent(book.filename)}`,
+        );
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }

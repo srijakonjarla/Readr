@@ -33,3 +33,6 @@ yarn-error.log*
 /uploads/*
 !/uploads/.gitkeep
 
+
+# SQLite database (created at runtime)
+data/

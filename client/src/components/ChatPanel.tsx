@@ -20,6 +20,9 @@ interface ChatPanelProps {
   activeThreadId: string;
   onSwitchThread: (id: string) => void;
   onAppendMessage: (threadId: string, msg: ChatMessage) => void;
+  onAppendStreamingMessage: (threadId: string, msg: ChatMessage) => void;
+  onUpdateStreamingText: (threadId: string, fullText: string) => void;
+  onCommitStreamingMessage: (threadId: string, msg: ChatMessage) => void;
   onClearThread: (threadId: string) => void;
   onRemoveLastMessage: (threadId: string) => void;
   pendingPrompt: string | null;
@@ -61,6 +64,9 @@ function ChatPanel({
   activeThreadId,
   onSwitchThread,
   onAppendMessage,
+  onAppendStreamingMessage,
+  onUpdateStreamingText,
+  onCommitStreamingMessage,
   onClearThread,
   onRemoveLastMessage,
   pendingPrompt,
@@ -97,38 +103,71 @@ function ChatPanel({
     }
     setSending(true);
 
+    // Spoiler cutoff: anchored thread captures its chapter at creation
+    // time; for the General thread, fall back to the reader's current
+    // chapter so we don't accidentally send the rest of the book.
+    const cutoffIdx = activeThread.chapterIndex ?? currentChapterIndex;
+    const body = {
+      query: text,
+      context: activeThread.anchor?.text ?? "",
+      filename: book.filename,
+      currentChapterIndex: cutoffIdx >= 0 ? cutoffIdx : undefined,
+      provider,
+    };
+
+    // Add an empty assistant placeholder; we'll fill it as tokens arrive.
+    const anchored = !!activeThread.anchor;
+    onAppendStreamingMessage(activeThread.id, {
+      role: "assistant",
+      text: "",
+      anchor: anchored,
+    });
+
+    let accumulated = "";
     try {
-      // Spoiler cutoff: anchored thread captures its chapter at creation
-      // time; for the General thread, fall back to the reader's current
-      // chapter so we don't accidentally send the rest of the book.
-      const cutoffIdx = activeThread.chapterIndex ?? currentChapterIndex;
-      const body = {
-        query: text,
-        context: activeThread.anchor?.text ?? "",
-        filename: book.filename,
-        currentChapterIndex: cutoffIdx >= 0 ? cutoffIdx : undefined,
-        provider,
-      };
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || `HTTP ${res.status}`);
+      if (!res.ok || !res.body) {
+        const errPayload = await res.json().catch(() => ({}));
+        throw new Error(
+          (errPayload as { error?: string }).error ?? `HTTP ${res.status}`,
+        );
       }
-      const data = await res.json();
-      onAppendMessage(activeThread.id, {
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (value) {
+          accumulated += decoder.decode(value, { stream: true });
+          onUpdateStreamingText(activeThread.id, accumulated);
+        }
+      }
+      // Flush any remaining bytes from the decoder.
+      const tail = decoder.decode();
+      if (tail) {
+        accumulated += tail;
+        onUpdateStreamingText(activeThread.id, accumulated);
+      }
+
+      onCommitStreamingMessage(activeThread.id, {
         role: "assistant",
-        text: data.response,
-        anchor: !!activeThread.anchor,
+        text: accumulated,
+        anchor: anchored,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
-      onAppendMessage(activeThread.id, {
+      const errorText = accumulated
+        ? `${accumulated}\n\n[Error: ${message}]`
+        : `Error: ${message}`;
+      onUpdateStreamingText(activeThread.id, errorText);
+      onCommitStreamingMessage(activeThread.id, {
         role: "assistant",
-        text: `Error: ${message}`,
+        text: errorText,
+        anchor: anchored,
       });
     } finally {
       setSending(false);
