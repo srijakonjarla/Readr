@@ -1,88 +1,120 @@
-# EPUB Reader with AI Features
+# Readr — EPUB reader with an AI companion
 
-A web application for reading EPUB books with AI-powered chat features.
+A single Next.js 15 app: serves an EPUB library and reader, with a streaming AI
+companion that respects spoiler boundaries.
 
-## Project Structure
+## Stack
 
-- `client/` - React frontend (TypeScript, Create React App)
-- `server/` - Node.js + Express backend (TypeScript)
-- `uploads/` - Uploaded EPUB files
-- `samples/` - Sample EPUB files for testing
+- **Next.js 15** (App Router) + **React 18** + **TypeScript**
+- **Tailwind v3** + a custom Modern theme (cream / sepia / dark)
+- **node:sqlite** (built-in, no native compile) for highlights / threads / messages
+- **Anthropic SDK** (Claude Sonnet 4.6) and **OpenAI SDK** (GPT-4.1-mini) — streaming responses
+- **`epub` 2.x** for EPUB parsing, with an LRU cache and a sanitizer pass on chapter HTML
+
+## Pages
+
+| URL | Page | Notes |
+|---|---|---|
+| `/` | Library | Lists books. Click a card → `/preview/<filename>`. Hero "Resume" → `/read/<filename>`. Empty shelf redirects to `/upload`. |
+| `/upload` | Upload form | Drops a new `.epub` into `uploads/` and redirects to `/`. |
+| `/preview/[filename]` | Book preview card | Metadata + chapter count + "Start reading". |
+| `/read/[filename]` | Reader + chat panel | Owns per-book chat state (highlights, threads, messages). |
+
+The site-wide header (R logo, theme toggle, +Add EPUB, ←Library) lives in
+`app/layout.tsx` and is rendered on every route. Theme state is held by
+`<ThemeProvider>` so it persists across navigation.
+
+## Project layout
+
+```
+app/
+  layout.tsx                               — root shell, ThemeProvider, ChromeHeader
+  page.tsx                                 — / (Library)
+  upload/page.tsx                          — /upload
+  preview/[filename]/page.tsx              — /preview/<filename>
+  read/[filename]/page.tsx                 — /read/<filename>
+  globals.css                              — Tailwind base + theme variables
+  api/
+    books/                                 — list + per-book persistence
+    files/[filename]/                      — TOC + metadata
+    epub/[filename]/chapter/[chapterId]/   — chapter HTML
+    epub/[filename]/asset/[assetId]/       — images / fonts inside the EPUB
+    chat/                                  — streaming chat
+    upload/                                — multipart upload
+    highlights/[id]/, threads/[id]/, …     — CRUD for persisted state
+components/                                — ChromeHeader, ThemeProvider, ChatPanel,
+                                             ReaderSection, LibrarySection, …
+hooks/                                     — useChapterLoader, useTextSelection,
+                                             useHighlightPainter, useScrollProgress
+lib/
+  db/                                      — SQLite schema + repos
+  services/{openai,claude}.ts              — streaming chat services
+  epub.ts                                  — parse cache, sanitizer, helpers
+  schemas.ts                               — zod schemas + parseOrError helper
+  persistence.ts                           — client-side fetch helpers
+shared/api.ts                              — types shared across server + client
+util/, types.ts                            — small client helpers
+uploads/                                   — uploaded EPUB files
+data/                                      — SQLite database (auto-created)
+```
 
 ## Setup
 
-### 1. Environment variables
+### 1. Environment
 
-Create a `.env` file in the project root with API keys for whichever providers you want to use:
+Create a `.env` at the repo root:
 
 ```
 OPENAI_API_KEY=sk-...
 ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-### 2. Install dependencies
+Add either or both — the chat panel has a runtime toggle.
+
+### 2. Install + run
 
 ```bash
-# Backend (root)
-npm install
-
-# Frontend
-cd client && npm install && cd ..
+npm install --legacy-peer-deps
+npm run dev          # http://localhost:3001
 ```
 
-### 3. Run in development
-
-Open two terminals.
-
-**Terminal 1 — backend** (Express on port 5001, hot-reloads via `tsx watch`):
+Production:
 
 ```bash
-npm run dev
+npm run build
+npm start            # http://localhost:3001
 ```
 
-**Terminal 2 — frontend** (CRA dev server on port 3000, proxies API to 5001):
+Type-check:
 
 ```bash
-cd client && npm start
+npm run typecheck
 ```
 
-Open http://localhost:3000.
-
-### Type checking
-
-```bash
-npm run typecheck         # server
-cd client && npx tsc --noEmit   # client
-```
-
-### Production build
-
-```bash
-npm run build      # compiles server to dist/
-npm start          # runs node dist/app.js
-
-cd client && npm run build   # builds static frontend
-```
-
-### Docker
+### 3. Docker
 
 ```bash
 docker-compose up --build
 ```
 
+App is on http://localhost:3001. `uploads/` and `data/` are bind-mounted so EPUBs and the SQLite DB persist across container restarts.
+
 ## API Endpoints
 
-- `POST /api/upload` - Upload an EPUB file
-- `GET /api/books` - List all books in the library
-- `GET /api/files/:filename` - Get metadata + table of contents for a book
-- `GET /api/epub/:filename/chapter/:chapterId` - Get chapter HTML
-- `POST /api/chat` - Submit a chat query. Body: `{ query, context, filename, currentChapterIndex, provider }` where `provider` is `"openai"` or `"claude"`.
+- `GET /api/books` — list every EPUB in `uploads/`
+- `POST /api/upload` — multipart upload (field name `file`, max 50 MB, `.epub` only)
+- `GET /api/files/:filename` — metadata + TOC
+- `GET /api/epub/:filename/chapter/:chapterId` — sanitized chapter HTML, with internal `<img>` URLs rewritten to point at our asset endpoint
+- `GET /api/epub/:filename/asset/:assetId` — image bytes from inside the EPUB
+- `POST /api/chat` — body: `{ query, context?, filename, currentChapterIndex?, provider }`. Returns a `text/plain` stream of model output.
+- Persistence: `GET /api/books/:filename/state`, `POST/DELETE /api/.../highlights`, `POST/DELETE /api/.../threads`, `POST/DELETE /api/.../messages`
 
 ## Features
 
-- Upload and browse EPUB books
-- Read by chapter with adjustable font size and dark/light theme
-- AI-powered chat:
-  - **Spoiler-safe**: only chapters up to your current reading position are sent to the model
-  - **Provider toggle**: OpenAI (GPT-4.1-mini) or Claude (Sonnet 4.6)
-  - Claude requests use prompt caching for fast/cheap follow-up questions on the same chapter
+- Browse + open EPUBs from a uploaded library
+- Chapter-by-chapter reader with floating chrome, left-rail dots, real progress bar, TOC drawer
+- **Spoiler-safe AI chat**: only chapters up to your current reading position are sent; system prompt forbids drawing on training-data knowledge of the book
+- **Streaming responses** via Web `ReadableStream` (token-by-token rendering)
+- **Highlights + threads** persisted to SQLite, survive server restarts
+- Theme cycle: cream → dark → sepia
+- Internal EPUB links (Contents pages, cross-chapter references) are intercepted client-side and routed to the right chapter
