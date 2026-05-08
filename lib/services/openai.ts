@@ -5,7 +5,9 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const MAX_JSON_CONTEXT_CHARS = 1_000_000;
 
-const SYSTEM_PROMPT = (truncationMessage: string) => `You are a reading companion analyzing a book the user is currently reading. The book JSON you receive contains ONLY the chapters the user has already read; later chapters have been deliberately withheld to prevent spoilers.
+const SYSTEM_PROMPT = (
+  truncationMessage: string,
+) => `You are a reading companion analyzing a book the user is currently reading. The book JSON you receive contains ONLY the chapters the user has already read; later chapters have been deliberately withheld to prevent spoilers.
 
 Strict rules:
 - Treat the provided chapters as the entire book the reader has access to. Do not draw on outside knowledge of this book to answer questions about plot, characters, themes, or events that occur later than what is provided.

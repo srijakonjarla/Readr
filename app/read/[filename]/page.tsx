@@ -48,9 +48,7 @@ export default function ReaderPage({
           chapterIndex: null,
           messages: [],
         };
-        const merged = hasMain
-          ? state.threads
-          : [mainThread, ...state.threads];
+        const merged = hasMain ? state.threads : [mainThread, ...state.threads];
         if (!hasMain) persistThread(filename, mainThread);
         setThreads(merged);
       })
@@ -148,10 +146,7 @@ export default function ReaderPage({
     persistMessage(threadId, msg);
   };
 
-  const appendStreamingMessage = (
-    threadId: string,
-    msg: ChatMessage,
-  ): void => {
+  const appendStreamingMessage = (threadId: string, msg: ChatMessage): void => {
     setThreads((prev) =>
       prev.map((t) =>
         t.id === threadId ? { ...t, messages: [...t.messages, msg] } : t,
@@ -172,10 +167,7 @@ export default function ReaderPage({
     );
   };
 
-  const commitStreamingMessage = (
-    threadId: string,
-    msg: ChatMessage,
-  ): void => {
+  const commitStreamingMessage = (threadId: string, msg: ChatMessage): void => {
     persistMessage(threadId, msg);
   };
 

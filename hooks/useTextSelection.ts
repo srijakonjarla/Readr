@@ -15,10 +15,7 @@ export interface SelectionPopoverState {
 // Walk all text nodes intersecting `range`, wrap each one's in-range portion
 // with a <mark class={className}>. Returns the inserted marks so the caller
 // can remove them on dismiss.
-function wrapRangeWithMarks(
-  range: Range,
-  className: string,
-): HTMLElement[] {
+function wrapRangeWithMarks(range: Range, className: string): HTMLElement[] {
   const marks: HTMLElement[] = [];
   const startNode = range.startContainer;
   const endNode = range.endContainer;

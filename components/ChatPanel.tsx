@@ -204,70 +204,28 @@ function ChatPanel({
   if (!open) return null;
 
   return (
-    <aside
-      className="fixed right-0 top-0 bottom-0 z-40 flex flex-col"
-      style={{
-        width: 420,
-        background: "var(--paper)",
-        borderLeft: "1px solid var(--rule-2)",
-        boxShadow: "-6px 0 28px -18px rgba(31,27,22,.18)",
-      }}
-    >
+    <aside className="fixed bottom-0 right-0 top-0 z-40 flex w-[420px] flex-col border-l border-rule-2 bg-paper shadow-[-6px_0_28px_-18px_rgba(31,27,22,.18)]">
       {/* Header */}
-      <div
-        className="flex items-center justify-between"
-        style={{
-          padding: "18px 22px 14px",
-          borderBottom: "1px solid var(--rule-2)",
-        }}
-      >
+      <div className="flex items-center justify-between border-b border-rule-2 px-[22px] pb-3.5 pt-[18px]">
         <div className="flex items-center gap-2.5">
           <span
+            className="flex h-7 w-7 items-center justify-center rounded-full text-accent"
             style={{
-              width: 28,
-              height: 28,
-              borderRadius: 999,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
               background: "color-mix(in oklab, var(--accent) 18%, transparent)",
-              color: "var(--accent)",
             }}
           >
             <Sparkles size={15} strokeWidth={1.8} />
           </span>
           <div>
-            <div
-              className="text-ink"
-              style={{
-                fontFamily: '"Source Serif 4", Georgia, serif',
-                fontSize: 16,
-                fontWeight: 600,
-              }}
-            >
+            <div className="font-serif text-base font-semibold text-ink">
               Companion
             </div>
-            <div
-              style={{
-                fontFamily: '"JetBrains Mono", monospace',
-                fontSize: 10,
-                color: "var(--ink-3)",
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-              }}
-            >
-              One question at a time
-            </div>
+            <div className="mono-caption">One question at a time</div>
           </div>
         </div>
         <button
           onClick={onClose}
-          style={{
-            all: "unset",
-            cursor: "pointer",
-            color: "var(--ink-3)",
-            padding: 4,
-          }}
+          className="cursor-pointer p-1 text-ink-3 btn-reset"
           aria-label="Close"
         >
           <X size={18} />
@@ -277,10 +235,7 @@ function ChatPanel({
       {/* Toolbar (Clear) — always visible so it persists across both contexts;
           disabled when there's nothing to clear or while a request is in flight. */}
       {activeThread && (
-        <div
-          className="flex items-center justify-end gap-2 px-5 py-1.5"
-          style={{ borderBottom: "1px solid var(--rule-2)" }}
-        >
+        <div className="flex items-center justify-end gap-2 border-b border-rule-2 px-5 py-1.5">
           {(() => {
             const canClear = !sending && asks.length > 0;
             return (
@@ -296,19 +251,11 @@ function ChatPanel({
                   }
                 }}
                 disabled={!canClear}
-                style={{
-                  all: "unset",
-                  cursor: canClear ? "pointer" : "not-allowed",
-                  opacity: canClear ? 1 : 0.4,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "4px 10px",
-                  borderRadius: 999,
-                  fontSize: 11,
-                  fontWeight: 500,
-                  color: "var(--ink-3)",
-                }}
+                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium text-ink-3 btn-reset ${
+                  canClear
+                    ? "cursor-pointer opacity-100"
+                    : "cursor-not-allowed opacity-40"
+                }`}
                 title={
                   asks.length === 0
                     ? "Nothing to clear in this context"
@@ -323,76 +270,40 @@ function ChatPanel({
       )}
 
       {/* Provider toggle */}
-      <div
-        className="flex items-center gap-2 px-5 py-2"
-        style={{ borderBottom: "1px solid var(--rule-2)", fontSize: 11 }}
-      >
-        <span
-          className="text-ink-3"
-          style={{ letterSpacing: "0.08em", textTransform: "uppercase" }}
-        >
-          Model
-        </span>
+      <div className="flex items-center gap-2 border-b border-rule-2 px-5 py-2 text-[11px]">
+        <span className="mono-caption">Model</span>
         <button
           onClick={() => setProvider("openai")}
-          className="nav-chip"
+          className="nav-chip chip-mini"
           aria-pressed={provider === "openai"}
-          style={{ fontSize: 11, padding: "4px 10px" }}
         >
           GPT-5.4
         </button>
-        {/* <button
+        <button
           onClick={() => setProvider("claude")}
-          className="nav-chip"
+          className="nav-chip chip-mini"
           aria-pressed={provider === "claude"}
-          style={{ fontSize: 11, padding: "4px 10px" }}
         >
           Claude Sonnet 4.6
-        </button> */}
+        </button>
       </div>
 
       {/* Context (formerly thread tabs) */}
       {threads.length > 1 && (
-        <div
-          className="flex items-center gap-2 px-5 py-2"
-          style={{ borderBottom: "1px solid var(--rule-2)", overflowX: "auto" }}
-        >
-          <span
-            className="text-ink-3"
-            style={{
-              fontSize: 11,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              whiteSpace: "nowrap",
-            }}
-          >
-            Context
-          </span>
+        <div className="flex items-center gap-2 overflow-x-auto border-b border-rule-2 px-5 py-2">
+          <span className="mono-caption whitespace-nowrap">Context</span>
           {threads.map((t) => {
             const active = t.id === activeThreadId;
             const deletable = t.id !== "main";
             return (
               <span
                 key={t.id}
-                className="nav-chip"
+                className="nav-chip inline-flex items-center gap-1 whitespace-nowrap py-1 pl-2.5 pr-1 text-[11px]"
                 aria-pressed={active}
-                style={{
-                  fontSize: 11,
-                  padding: "4px 4px 4px 10px",
-                  whiteSpace: "nowrap",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 4,
-                }}
               >
                 <button
                   onClick={() => onSwitchThread(t.id)}
-                  style={{
-                    all: "unset",
-                    cursor: "pointer",
-                    color: "inherit",
-                    font: "inherit",
-                  }}
+                  className="cursor-pointer text-inherit btn-reset"
                 >
                   {t.title}
                 </button>
@@ -409,16 +320,7 @@ function ChatPanel({
                     }}
                     aria-label={`Delete context ${t.title}`}
                     title="Delete context"
-                    style={{
-                      all: "unset",
-                      cursor: "pointer",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      padding: 2,
-                      borderRadius: 999,
-                      color: "var(--ink-3)",
-                      opacity: 0.7,
-                    }}
+                    className="inline-flex cursor-pointer items-center rounded-full p-0.5 text-ink-3 opacity-70 btn-reset"
                   >
                     <X size={11} />
                   </button>
@@ -431,20 +333,7 @@ function ChatPanel({
 
       {/* Anchor card */}
       {activeThread?.anchor && (
-        <div
-          style={{
-            margin: "14px 18px 0",
-            padding: "12px 14px",
-            background: "var(--bg-2)",
-            borderRadius: 6,
-            borderLeft: "2px solid var(--accent)",
-            fontFamily: '"Source Serif 4", Georgia, serif',
-            fontStyle: "italic",
-            fontSize: 13,
-            color: "var(--ink-2)",
-            lineHeight: 1.5,
-          }}
-        >
+        <div className="mx-[18px] mt-3.5 rounded-md border-l-2 border-accent bg-bg-2 px-3.5 py-3 font-serif text-[13px] italic leading-[1.5] text-ink-2">
           “{activeThread.anchor.text.slice(0, 180)}
           {activeThread.anchor.text.length > 180 ? "…" : ""}”
         </div>
@@ -453,8 +342,7 @@ function ChatPanel({
       {/* Asks list */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto"
-        style={{ padding: "18px 22px" }}
+        className="flex-1 overflow-y-auto px-[22px] py-[18px]"
       >
         {activeThread && asks.length === 0 && !sending && (
           <Greeting onPick={(p) => void submit(p)} />
@@ -478,22 +366,8 @@ function ChatPanel({
       </div>
 
       {/* Composer */}
-      <div
-        style={{
-          padding: "14px 18px 18px",
-          borderTop: "1px solid var(--rule-2)",
-          background: "var(--paper)",
-        }}
-      >
-        <div
-          className="flex items-end gap-2"
-          style={{
-            padding: "8px 8px 8px 14px",
-            background: "var(--bg)",
-            border: "1px solid var(--rule)",
-            borderRadius: 10,
-          }}
-        >
+      <div className="border-t border-rule-2 bg-paper px-[18px] pb-[18px] pt-3.5">
+        <div className="flex items-end gap-2 rounded-[10px] border border-rule bg-bg py-2 pl-3.5 pr-2">
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -505,62 +379,24 @@ function ChatPanel({
             }}
             rows={1}
             placeholder="Ask one thing about what you've read…"
-            style={{
-              flex: 1,
-              resize: "none",
-              border: "none",
-              outline: "none",
-              background: "transparent",
-              color: "var(--ink)",
-              fontFamily: '"Source Serif 4", Georgia, serif',
-              fontSize: 15,
-              lineHeight: 1.5,
-              padding: "6px 0",
-              maxHeight: 140,
-            }}
+            className="max-h-[140px] flex-1 resize-none border-none bg-transparent py-1.5 font-serif text-[15px] leading-[1.5] text-ink outline-none"
           />
           <button
             onClick={() => void submit()}
             disabled={!input.trim() || sending}
-            style={{
-              all: "unset",
-              cursor: input.trim() && !sending ? "pointer" : "not-allowed",
-              padding: "10px 16px",
-              borderRadius: 8,
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              background: "var(--accent)",
-              color: "#fff",
-              fontSize: 13,
-              fontWeight: 600,
-              opacity: input.trim() && !sending ? 1 : 0.5,
-              transition: "opacity .15s ease, filter .15s ease",
-              boxShadow: "0 4px 10px -4px rgba(0,0,0,.18)",
-            }}
+            className={`inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-[13px] font-semibold text-white shadow-[0_4px_10px_-4px_rgba(0,0,0,.18)] transition-[opacity,filter] duration-150 btn-reset ${
+              input.trim() && !sending
+                ? "cursor-pointer opacity-100"
+                : "cursor-not-allowed opacity-50"
+            }`}
             aria-label="Send message"
           >
             <Send size={14} /> Ask
           </button>
         </div>
-        <div
-          className="text-ink-3 mt-2 flex items-center gap-1.5"
-          style={{
-            fontFamily: '"JetBrains Mono", monospace',
-            fontSize: 10,
-            letterSpacing: "0.06em",
-            textTransform: "uppercase",
-          }}
-        >
-          <span
-            style={{
-              width: 4,
-              height: 4,
-              borderRadius: 999,
-              background: "var(--accent)",
-            }}
-          />
-          Each ask is independent — answers don't carry across questions
+        <div className="mt-2 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.06em] text-ink-3">
+          <span className="h-1 w-1 rounded-full bg-accent" />
+          Each ask is independent — answers don&apos;t carry across questions
         </div>
       </div>
     </aside>
@@ -580,53 +416,21 @@ function Greeting({ onPick }: { onPick: (prompt: string) => void }) {
   ];
   return (
     <div className="pb-4 pt-2">
-      <h3
-        className="text-ink"
-        style={{
-          fontFamily: '"Source Serif 4", Georgia, serif',
-          fontSize: 22,
-          fontWeight: 600,
-          lineHeight: 1.25,
-          marginBottom: 6,
-          textWrap: "pretty",
-        }}
-      >
+      <h3 className="mb-1.5 font-serif text-[22px] font-semibold leading-[1.25] text-ink [text-wrap:pretty]">
         Ask me one thing.
       </h3>
-      <p
-        style={{
-          fontFamily: '"Source Serif 4", Georgia, serif',
-          fontStyle: "italic",
-          fontSize: 14,
-          color: "var(--ink-2)",
-          marginBottom: 18,
-          lineHeight: 1.5,
-        }}
-      >
-        I have only the chapters you've read so far — and I treat every question
-        as a fresh ask.
+      <p className="mb-[18px] font-serif text-sm italic leading-[1.5] text-ink-2">
+        I have only the chapters you&apos;ve read so far — and I treat every
+        question as a fresh ask.
       </p>
       <div className="flex flex-col gap-1.5">
         {opts.map((o) => (
           <button
             key={o.label}
             onClick={() => onPick(o.label)}
-            style={{
-              all: "unset",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              padding: "12px 14px",
-              background: "var(--bg-2)",
-              borderRadius: 6,
-              border: "1px solid var(--rule-2)",
-              fontFamily: '"Source Serif 4", Georgia, serif',
-              fontSize: 14,
-              color: "var(--ink-2)",
-            }}
+            className="flex cursor-pointer items-center gap-3 rounded-md border border-rule-2 bg-bg-2 px-3.5 py-3 font-serif text-sm text-ink-2 btn-reset"
           >
-            <span style={{ color: "var(--accent)" }}>{o.icon}</span> {o.label}
+            <span className="text-accent">{o.icon}</span> {o.label}
           </button>
         ))}
       </div>
@@ -644,66 +448,27 @@ function AskCard({
   onRegenerate?: () => void;
 }) {
   return (
-    <div
-      className="card"
-      style={{
-        marginBottom: 14,
-        padding: 0,
-        overflow: "hidden",
-        borderRadius: 10,
-      }}
-    >
+    <div className="card mb-3.5 overflow-hidden rounded-[10px] p-0">
       {/* Question */}
       <div
+        className="border-b border-rule-2 px-3.5 pb-2 pt-2.5"
         style={{
-          padding: "10px 14px 8px",
-          borderBottom: "1px solid var(--rule-2)",
           background: "color-mix(in oklab, var(--accent) 5%, transparent)",
         }}
       >
-        <div
-          className="kicker"
-          style={{ fontSize: 10, color: "var(--accent)", marginBottom: 4 }}
-        >
-          Ask
-        </div>
-        <div
-          style={{
-            fontFamily: '"Source Serif 4", Georgia, serif',
-            fontSize: 15,
-            fontWeight: 600,
-            color: "var(--ink)",
-            lineHeight: 1.4,
-            textWrap: "pretty",
-          }}
-        >
+        <div className="kicker mb-1 text-[10px] text-accent">Ask</div>
+        <div className="font-serif text-[15px] font-semibold leading-[1.4] text-ink [text-wrap:pretty]">
           {ask.question.text}
         </div>
       </div>
       {/* Answer */}
-      <div style={{ padding: "12px 14px 14px" }}>
-        <div
-          className="flex items-center justify-between"
-          style={{ marginBottom: 6 }}
-        >
-          <div className="kicker" style={{ fontSize: 10 }}>
-            Answer
-          </div>
+      <div className="px-3.5 pb-3.5 pt-3">
+        <div className="mb-1.5 flex items-center justify-between">
+          <div className="kicker text-[10px]">Answer</div>
           {onRegenerate && (
             <button
               onClick={onRegenerate}
-              style={{
-                all: "unset",
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 5,
-                padding: "2px 8px",
-                borderRadius: 999,
-                fontSize: 11,
-                fontWeight: 500,
-                color: "var(--ink-3)",
-              }}
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium text-ink-3 btn-reset"
               title="Re-ask the same question"
             >
               <RotateCcw size={11} /> Regenerate
@@ -735,22 +500,12 @@ function PendingAsk({ text }: { text: string }) {
 
 function TypingDots() {
   return (
-    <div
-      className="flex items-center gap-1 py-1"
-      style={{ color: "var(--ink-3)" }}
-    >
+    <div className="flex items-center gap-1 py-1 text-ink-3">
       {[0, 0.2, 0.4].map((delay) => (
         <span
           key={delay}
-          className="animate-dot-pulse"
-          style={{
-            width: 6,
-            height: 6,
-            borderRadius: "50%",
-            background: "currentColor",
-            display: "inline-block",
-            animationDelay: `${delay}s`,
-          }}
+          className="inline-block h-1.5 w-1.5 animate-dot-pulse rounded-full bg-current"
+          style={{ animationDelay: `${delay}s` }}
         />
       ))}
     </div>

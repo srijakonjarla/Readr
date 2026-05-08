@@ -35,13 +35,24 @@ const config: Config = {
           soft: "var(--accent-soft)",
         },
       },
+      // Custom font sizes for values Tailwind defaults don't cover.
+      // For 12/14/16/18/24/30/36/48px use Tailwind built-ins
+      // (text-xs, text-sm, text-base, text-lg, text-2xl, text-3xl, etc).
+      fontSize: {
+        kicker: ["11px", { lineHeight: "1.3" }],
+        chapter: ["56px", { lineHeight: "1" }],
+        hero: ["64px", { lineHeight: "1" }],
+      },
+      borderRadius: {
+        pill: "999px",
+      },
       boxShadow: {
         card: "0 1px 0 rgba(31,27,22,.04), 0 24px 60px -30px rgba(31,27,22,.18)",
         mini: "0 6px 16px -8px rgba(31,27,22,.3)",
-        pill:
-          "0 1px 0 rgba(255,255,255,.5) inset, 0 8px 24px -10px rgba(31,27,22,.18)",
+        pill: "0 1px 0 rgba(255,255,255,.5) inset, 0 8px 24px -10px rgba(31,27,22,.18)",
         drawer: "0 24px 60px -20px rgba(31,27,22,.25)",
         pop: "0 12px 28px -10px rgba(0,0,0,.35)",
+        cta: "0 1px 0 rgba(255,255,255,.25) inset, 0 12px 28px -8px rgba(0,0,0,.25)",
       },
       maxWidth: {
         page: "1320px",

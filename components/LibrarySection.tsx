@@ -5,6 +5,7 @@ import { ArrowRight, BookOpen } from "lucide-react";
 import type { Book } from "../types";
 import MiniCover from "./MiniCover";
 import { bookGradient, bookHue, chipHueColor } from "../util/hue";
+import { FONT, headingStyle } from "../lib/styles";
 
 interface LibrarySectionProps {
   books: Book[];
@@ -94,27 +95,10 @@ function LibrarySection({
           <span className="status-dot animate-pulse2" />
           Reading session active
         </div>
-        <h1
-          className="mt-4 text-ink"
-          style={{
-            fontSize: 64,
-            fontWeight: 700,
-            letterSpacing: "-0.035em",
-            lineHeight: 1,
-            textWrap: "balance",
-          }}
-        >
+        <h1 className="mt-4 text-ink" style={headingStyle(64)}>
           {greetings()}
         </h1>
-        <p
-          className="mt-4 text-ink-2"
-          style={{
-            fontSize: 19,
-            fontWeight: 400,
-            lineHeight: 1.5,
-            maxWidth: 560,
-          }}
-        >
+        <p className="mt-4 max-w-[560px] text-[19px] font-normal text-ink-2">
           {books.length === 0 ? (
             "Your shelf is empty. Upload an EPUB and settle in."
           ) : (
@@ -131,84 +115,33 @@ function LibrarySection({
       {/* Hero card */}
       {heroBook && (
         <div
-          className="card-hero mb-[72px] cursor-pointer"
+          className="card-hero mb-[72px] grid cursor-pointer grid-cols-[1fr_1.3fr]"
           onClick={() => handleOpenHero(heroBook)}
-          style={{ display: "grid", gridTemplateColumns: "1fr 1.3fr" }}
         >
           {/* Left: gradient cover */}
           <div
-            style={{
-              padding: 40,
-              minHeight: 380,
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "space-between",
-              background: bookGradient(bookHue(heroBook.filename)),
-            }}
+            className="flex min-h-[380px] flex-col justify-between p-10"
+            style={{ background: bookGradient(bookHue(heroBook.filename)) }}
           >
-            <span
-              className="self-start"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 7,
-                padding: "5px 11px",
-                borderRadius: 999,
-                background: "rgba(255,255,255,.12)",
-                backdropFilter: "blur(8px)",
-                color: "rgba(255,255,255,.92)",
-                fontSize: 11,
-                fontWeight: 600,
-                letterSpacing: "0.04em",
-                textTransform: "uppercase",
-              }}
-            >
-              <span
-                style={{
-                  width: 5,
-                  height: 5,
-                  borderRadius: 3,
-                  background: "#fff",
-                }}
-              />
+            <span className="hero-badge self-start">
+              <span className="hero-badge-dot" />
               Currently reading
             </span>
             <div>
               <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: chipHueColor(bookHue(heroBook.filename)),
-                  textTransform: "uppercase",
-                  letterSpacing: "0.16em",
-                  marginBottom: 14,
-                }}
+                className="mb-3.5 text-kicker font-semibold uppercase tracking-[0.16em]"
+                style={{ color: chipHueColor(bookHue(heroBook.filename)) }}
               >
                 Your shelf
               </div>
               <div
-                style={{
-                  fontFamily: '"Source Serif 4", Georgia, serif',
-                  fontSize: 36,
-                  fontWeight: 600,
-                  color: "#fff",
-                  lineHeight: 1.05,
-                  letterSpacing: "-0.01em",
-                  textWrap: "balance",
-                  maxWidth: 320,
-                }}
+                className="max-w-[320px] text-[36px] font-semibold leading-[1.05] tracking-[-0.01em] text-white [text-wrap:balance]"
+                style={{ fontFamily: FONT.serif }}
               >
                 {heroBook.metadata?.title || heroBook.filename}
               </div>
               {heroBook.metadata?.creator && (
-                <div
-                  style={{
-                    fontSize: 14,
-                    fontWeight: 500,
-                    color: "rgba(255,255,255,.7)",
-                    marginTop: 10,
-                  }}
-                >
+                <div className="mt-2.5 text-sm font-medium text-white/70">
                   {heroBook.metadata.creator}
                 </div>
               )}
@@ -216,40 +149,17 @@ function LibrarySection({
           </div>
 
           {/* Right: meta + resume */}
-          <div
-            style={{
-              padding: "40px 44px",
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
+          <div className="flex flex-col px-11 py-10">
             <div className="kicker mb-[18px]">Continue reading</div>
             <p
-              style={{
-                fontFamily: '"Source Serif 4", Georgia, serif',
-                fontSize: 18,
-                fontStyle: "italic",
-                color: "var(--ink-2)",
-                lineHeight: 1.55,
-                margin: 0,
-                marginBottom: 28,
-                maxWidth: 460,
-                textWrap: "pretty",
-              }}
+              className="m-0 mb-7 max-w-[460px] text-lg italic leading-[1.55] text-ink-2 [text-wrap:pretty]"
+              style={{ fontFamily: FONT.serif }}
             >
               {heroBook.metadata?.description ||
                 `“A book on your shelf, waiting. Tap to step back in.”`}
             </p>
-            <div style={{ flex: 1 }} />
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(3, 1fr)",
-                gap: 24,
-                paddingTop: 28,
-                borderTop: "1px solid var(--rule-2)",
-              }}
-            >
+            <div className="flex-1" />
+            <div className="grid grid-cols-3 gap-6 border-t border-rule-2 pt-7">
               <Stat
                 label="Author"
                 value={heroBook.metadata?.creator?.split(" ")[0] ?? "—"}
@@ -260,30 +170,9 @@ function LibrarySection({
               />
               <Stat label="Format" value="EPUB" />
             </div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 14,
-                marginTop: 28,
-              }}
-            >
-              <div
-                style={{
-                  flex: 1,
-                  height: 6,
-                  borderRadius: 3,
-                  background: "var(--bg-2)",
-                  overflow: "hidden",
-                }}
-              >
-                <div
-                  style={{
-                    height: "100%",
-                    width: "0%",
-                    background: "var(--accent)",
-                  }}
-                />
+            <div className="mt-7 flex items-center gap-3.5">
+              <div className="progress-track">
+                <div className="progress-fill" style={{ width: "0%" }} />
               </div>
               <button
                 onClick={(e) => {
@@ -303,15 +192,7 @@ function LibrarySection({
       {books.length > 0 && (
         <div>
           <div className="mb-7 flex items-baseline justify-between">
-            <h2
-              className="text-ink"
-              style={{
-                fontSize: 28,
-                fontWeight: 700,
-                letterSpacing: "-0.02em",
-                margin: 0,
-              }}
-            >
+            <h2 className="m-0 text-[28px] font-bold tracking-[-0.02em] text-ink">
               Your library
             </h2>
             <div className="flex gap-2">
@@ -319,13 +200,8 @@ function LibrarySection({
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
-                  className="nav-chip"
+                  className="nav-chip border border-rule-2 px-[13px] py-[7px] text-xs"
                   aria-pressed={filter === f}
-                  style={{
-                    fontSize: 12,
-                    padding: "7px 13px",
-                    border: "1px solid var(--rule-2)",
-                  }}
                 >
                   {f === "all"
                     ? "All"
@@ -337,77 +213,30 @@ function LibrarySection({
             </div>
           </div>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))",
-              gap: 16,
-            }}
-          >
+          <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(360px,1fr))]">
             {otherBooks.map((book) => {
               const cardHue = bookHue(book.filename);
               return (
                 <button
                   key={book.filename}
                   onClick={() => onBookSelect(book)}
-                  className="card group flex w-full items-stretch gap-[18px] p-[18px] text-left transition-all hover:-translate-y-0.5"
-                  style={{
-                    ["--card-hue" as string]: String(cardHue),
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "var(--accent-soft)";
-                    e.currentTarget.style.borderColor =
-                      "color-mix(in oklab, var(--accent) 35%, transparent)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "";
-                    e.currentTarget.style.borderColor = "";
-                  }}
+                  className="card book-card group flex w-full items-stretch gap-[18px] p-[18px] text-left transition-all hover:-translate-y-0.5"
                 >
                   <MiniCover hue={cardHue} title={book.metadata?.title} />
                   <div className="flex min-w-0 flex-1 flex-col">
-                    <div
-                      className="truncate text-ink"
-                      style={{
-                        fontSize: 16,
-                        fontWeight: 600,
-                        letterSpacing: "-0.01em",
-                        lineHeight: 1.2,
-                        marginBottom: 4,
-                      }}
-                    >
+                    <div className="mb-1 truncate text-base font-semibold leading-[1.2] tracking-[-0.01em] text-ink">
                       {book.metadata?.title || book.filename}
                     </div>
-                    <div
-                      className="text-ink-3"
-                      style={{ fontSize: 13, marginBottom: 12 }}
-                    >
+                    <div className="mb-3 text-[13px] text-ink-3">
                       {book.metadata?.creator || "Unknown author"}
                     </div>
                     <div className="flex-1" />
                     <div className="flex items-center justify-between gap-2">
-                      <span
-                        className="text-ink-3 inline-flex items-center gap-1.5"
-                        style={{
-                          fontSize: 11,
-                          fontWeight: 600,
-                          letterSpacing: "0.02em",
-                        }}
-                      >
+                      <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.02em] text-ink-3">
                         <BookOpen size={12} /> EPUB
                       </span>
                       {book.metadata?.publisher && (
-                        <span
-                          className="text-ink-3 truncate"
-                          style={{
-                            fontSize: 11,
-                            padding: "3px 8px",
-                            borderRadius: 999,
-                            background: "var(--bg)",
-                            border: "1px solid var(--rule-2)",
-                            maxWidth: 140,
-                          }}
-                        >
+                        <span className="meta-chip">
                           {book.metadata.publisher}
                         </span>
                       )}
@@ -434,27 +263,8 @@ function LibrarySection({
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div
-        className="text-ink-3"
-        style={{
-          fontSize: 11,
-          fontWeight: 600,
-          letterSpacing: "0.04em",
-          marginBottom: 6,
-          textTransform: "uppercase",
-        }}
-      >
-        {label}
-      </div>
-      <div
-        className="truncate text-ink"
-        style={{
-          fontSize: 18,
-          fontWeight: 700,
-          letterSpacing: "-0.02em",
-          lineHeight: 1.1,
-        }}
-      >
+      <div className="kicker mb-1.5 tracking-[0.04em]">{label}</div>
+      <div className="truncate text-lg font-bold leading-[1.1] tracking-[-0.02em] text-ink">
         {value}
       </div>
     </div>

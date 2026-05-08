@@ -15,9 +15,7 @@ export function useScrollProgress(onScroll?: () => void): number {
     const doc = document.documentElement;
     const initialMax = doc.scrollHeight - doc.clientHeight;
     setPct(
-      initialMax > 0
-        ? Math.min(1, Math.max(0, doc.scrollTop / initialMax))
-        : 0,
+      initialMax > 0 ? Math.min(1, Math.max(0, doc.scrollTop / initialMax)) : 0,
     );
 
     const handler = (): void => {

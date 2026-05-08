@@ -38,9 +38,6 @@ export async function GET(
     });
   } catch (error) {
     console.error(`[GET /api/files/${filename}]`, error);
-    return Response.json(
-      { error: "Failed to load book" },
-      { status: 500 },
-    );
+    return Response.json({ error: "Failed to load book" }, { status: 500 });
   }
 }

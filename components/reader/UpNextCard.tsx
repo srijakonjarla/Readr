@@ -13,31 +13,13 @@ interface UpNextCardProps {
  */
 function UpNextCard({ title, chapterNumber, onContinue }: UpNextCardProps) {
   return (
-    <div
-      className="mt-20 grid items-center gap-6"
-      style={{
-        padding: 28,
-        borderRadius: 16,
-        background: "var(--paper)",
-        border: "1px solid var(--rule-2)",
-        gridTemplateColumns: "1fr auto",
-      }}
-    >
+    <div className="mt-20 grid grid-cols-[1fr_auto] items-center gap-6 rounded-2xl border border-rule-2 bg-paper p-7">
       <div>
         <div className="kicker mb-2">Up next</div>
-        <div
-          className="text-ink"
-          style={{
-            fontSize: 24,
-            fontWeight: 700,
-            letterSpacing: "-0.02em",
-          }}
-        >
+        <div className="text-2xl font-bold tracking-[-0.02em] text-ink">
           {title}
         </div>
-        <div className="text-ink-3 mt-1" style={{ fontSize: 14 }}>
-          Chapter {chapterNumber}
-        </div>
+        <div className="mt-1 text-sm text-ink-3">Chapter {chapterNumber}</div>
       </div>
       <button onClick={onContinue} className="btn-ink">
         Continue <ArrowRight size={15} strokeWidth={2.2} />

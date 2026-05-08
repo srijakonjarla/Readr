@@ -62,39 +62,20 @@ function UploadSection({ onUploadSuccess }: UploadSectionProps) {
   return (
     <section className="mx-auto max-w-xl px-6 pb-32">
       <div className="card p-10">
-        <h2
-          className="text-ink"
-          style={{
-            fontFamily: '"Source Serif 4", Georgia, serif',
-            fontSize: 28,
-            fontWeight: 600,
-            letterSpacing: "-0.01em",
-          }}
-        >
+        <h2 className="font-serif text-[28px] font-semibold tracking-[-0.01em] text-ink">
           Add a book
         </h2>
-        <p className="mt-1 text-ink-2" style={{ fontSize: 15 }}>
+        <p className="mt-1 text-[15px] text-ink-2">
           Upload an EPUB to start reading.
         </p>
 
         <form onSubmit={handleUpload} className="mt-6 space-y-4">
-          <label
-            className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-6 py-12 text-center transition-colors"
-            style={{
-              borderColor: "var(--rule)",
-              background: "var(--bg-2)",
-            }}
-          >
+          <label className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-rule bg-bg-2 px-6 py-12 text-center transition-colors">
             <Upload size={32} className="text-accent" strokeWidth={1.5} />
-            <span
-              className="text-ink"
-              style={{ fontSize: 14, fontWeight: 600 }}
-            >
+            <span className="text-sm font-semibold text-ink">
               {fileName || "Click to choose an EPUB"}
             </span>
-            <span className="text-ink-3" style={{ fontSize: 12 }}>
-              .epub files only
-            </span>
+            <span className="text-xs text-ink-3">.epub files only</span>
             <input
               type="file"
               ref={fileInputRef}

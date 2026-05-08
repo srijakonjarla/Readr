@@ -10,9 +10,7 @@ const log = (action: string, error: unknown): void => {
 };
 
 export async function fetchBookState(filename: string): Promise<BookState> {
-  const res = await fetch(
-    `/api/books/${encodeURIComponent(filename)}/state`,
-  );
+  const res = await fetch(`/api/books/${encodeURIComponent(filename)}/state`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }

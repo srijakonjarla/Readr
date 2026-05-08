@@ -84,8 +84,7 @@ function ReaderSection({
   const currentChapter = toc[currentChapterIndex];
   const chapterTitle = currentChapter?.title ?? "";
   const chapterHighlights = useMemo(
-    () =>
-      highlights.filter((h) => h.chapterIndex === currentChapterIndex),
+    () => highlights.filter((h) => h.chapterIndex === currentChapterIndex),
     [highlights, currentChapterIndex],
   );
   // Stable object identity for dangerouslySetInnerHTML — without this, React
@@ -222,24 +221,11 @@ function ReaderSection({
       />
 
       <div className="mx-auto max-w-reading pt-24 px-14 pb-36">
-        <h1
-          className="text-ink"
-          style={{
-            margin: 0,
-            fontSize: 56,
-            fontWeight: 700,
-            letterSpacing: "-0.035em",
-            lineHeight: 1,
-            textWrap: "balance",
-          }}
-        >
+        <h1 className="m-0 text-chapter font-bold tracking-[-0.035em] text-ink [text-wrap:balance]">
           {chapterTitle || "Untitled chapter"}
         </h1>
 
-        <div
-          className="text-ink-3 flex flex-wrap items-center gap-4"
-          style={{ margin: "40px 0 56px", fontSize: 12, fontWeight: 500 }}
-        >
+        <div className="mt-10 mb-14 flex flex-wrap items-center gap-4 text-xs font-medium text-ink-3">
           <span className="inline-flex items-center gap-1.5">
             <BookOpen size={12} /> {bookInfo.metadata?.title || "Book"}
           </span>
@@ -250,10 +236,7 @@ function ReaderSection({
             </span>
           )}
           {threadCount > 0 && (
-            <span
-              className="inline-flex items-center gap-1.5"
-              style={{ color: "var(--accent)" }}
-            >
+            <span className="inline-flex items-center gap-1.5 text-accent">
               <Sparkles size={12} /> {threadCount} thread
               {threadCount === 1 ? "" : "s"}
             </span>
@@ -330,17 +313,7 @@ function ReaderSection({
       {!chatOpen && !showToc && (
         <button
           onClick={onOpenChat}
-          className="fixed z-[60] flex items-center gap-2.5 rounded-full px-5 py-3.5 text-white shadow-lg transition-transform hover:scale-105"
-          style={{
-            right: 28,
-            bottom: 28,
-            background: "var(--accent)",
-            boxShadow:
-              "0 1px 0 rgba(255,255,255,.25) inset, 0 12px 28px -8px rgba(0,0,0,.25)",
-            fontSize: 14,
-            fontWeight: 600,
-            letterSpacing: "-0.01em",
-          }}
+          className="fixed bottom-7 right-7 z-[60] flex items-center gap-2.5 rounded-full bg-accent px-5 py-3.5 text-sm font-semibold tracking-[-0.01em] text-white shadow-cta transition-transform hover:scale-105"
         >
           <Sparkles size={16} />
           Ask the Companion

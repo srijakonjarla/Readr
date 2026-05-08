@@ -2,6 +2,7 @@
 
 import React from "react";
 import { miniGradient } from "../util/hue";
+import { FONT } from "../lib/styles";
 
 interface MiniCoverProps {
   hue: number;
@@ -20,54 +21,28 @@ function MiniCover({
 }: MiniCoverProps) {
   return (
     <div
-      style={{
-        width,
-        height,
-        borderRadius: 6,
-        background: miniGradient(hue),
-        boxShadow: "0 6px 16px -8px rgba(31,27,22,.3)",
-        position: "relative",
-        overflow: "hidden",
-        flexShrink: 0,
-      }}
+      className="relative shrink-0 overflow-hidden rounded-md shadow-mini"
+      style={{ width, height, background: miniGradient(hue) }}
     >
       {title && (
         <div
+          className="absolute left-2 right-2 top-2.5 overflow-hidden text-[9px] font-semibold leading-[1.1] text-white"
           style={{
-            position: "absolute",
-            top: 10,
-            left: 8,
-            right: 8,
-            fontFamily: '"Source Serif 4", Georgia, serif',
-            fontSize: 9,
-            fontWeight: 600,
-            color: "#fff",
-            lineHeight: 1.1,
+            fontFamily: FONT.serif,
             display: "-webkit-box",
             WebkitLineClamp: 4,
             WebkitBoxOrient: "vertical",
-            overflow: "hidden",
           }}
         >
           {title}
         </div>
       )}
       {typeof progress === "number" && (
-        <div
-          style={{
-            position: "absolute",
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: 4,
-            background: "rgba(255,255,255,.15)",
-          }}
-        >
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/15">
           <div
+            className="h-full bg-accent"
             style={{
-              height: "100%",
               width: `${Math.min(100, Math.max(0, progress * 100))}%`,
-              background: "var(--accent)",
             }}
           />
         </div>

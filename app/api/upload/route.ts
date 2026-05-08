@@ -8,11 +8,7 @@ import {
   loadEpub,
   readEpubMetadata,
 } from "@/lib/epub";
-import {
-  insertAssets,
-  insertBook,
-  insertChapters,
-} from "@/lib/db/books";
+import { insertAssets, insertBook, insertChapters } from "@/lib/db/books";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -85,8 +81,7 @@ export async function POST(req: Request): Promise<Response> {
     });
   } catch (error) {
     console.error("[POST /api/upload]", error);
-    const message =
-      error instanceof Error ? error.message : "Upload failed";
+    const message = error instanceof Error ? error.message : "Upload failed";
     return Response.json({ error: message }, { status: 500 });
   } finally {
     await fs.unlink(tmpPath).catch(() => undefined);

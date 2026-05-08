@@ -292,6 +292,184 @@
     text-transform: uppercase;
   }
 
+  /* Dark popover (anchored above text selection / on highlight click).
+     Used by SelectionPopover and HighlightPopover. */
+  .popover {
+    position: fixed;
+    transform: translate(-50%, -100%);
+    background: var(--ink);
+    border-radius: 12px;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 12px 28px -10px rgba(0, 0, 0, 0.35);
+    z-index: 90;
+  }
+  .popover-btn {
+    all: unset;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .popover-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+  .popover-btn-primary {
+    background: var(--accent);
+    color: #fff;
+    font-weight: 600;
+  }
+
+  /* Sidebar / drawer chapter button — used in TocDrawer. */
+  .toc-chapter-btn {
+    all: unset;
+    cursor: pointer;
+    padding: 10px 12px;
+    border-radius: 8px;
+    display: grid;
+    grid-template-columns: 24px 1fr;
+    gap: 10px;
+    align-items: center;
+    background: transparent;
+  }
+  .toc-chapter-btn[data-active="true"] {
+    background: color-mix(in oklab, var(--accent) 12%, transparent);
+  }
+  .toc-chapter-num {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink-3);
+  }
+  .toc-chapter-btn[data-active="true"] .toc-chapter-num {
+    color: var(--accent);
+  }
+  .toc-chapter-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink-2);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .toc-chapter-btn[data-active="true"] .toc-chapter-title {
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  /* TocDrawer "Quick action" row button (full-width, disabled style). */
+  .drawer-action-btn {
+    all: unset;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-2);
+  }
+  .drawer-action-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+
+  /* Drawer divider line. */
+  .drawer-divider {
+    height: 1px;
+    background: var(--rule-2);
+    margin: 18px 0 14px;
+  }
+
+  /* Strip default <button> styling so Tailwind utilities can fully restyle.
+     Defined in @layer components so utility classes (e.g. text-[11px],
+     inline-flex, gap-*) reliably override its `all: unset` reset. */
+  .btn-reset {
+    all: unset;
+    cursor: pointer;
+    box-sizing: border-box;
+  }
+
+  /* Mono uppercase caption (e.g., "Model", "Context", "ASK"). */
+  .mono-caption {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--ink-3);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* Compact pill chip used for chat-panel tags / model toggle. */
+  .chip-mini {
+    font-size: 11px;
+    padding: 4px 10px;
+  }
+
+  /* Library list card with accent-soft hover. */
+  .book-card:hover {
+    background: var(--accent-soft);
+    border-color: color-mix(in oklab, var(--accent) 35%, transparent);
+  }
+
+  /* "Currently reading" badge (translucent over hero gradient). */
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 11px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(8px);
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .hero-badge-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 3px;
+    background: #fff;
+  }
+
+  /* Pill-shaped, bordered metadata chip used in book card metadata rows. */
+  .meta-chip {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--bg);
+    border: 1px solid var(--rule-2);
+    color: var(--ink-3);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 140px;
+  }
+
+  /* Horizontal accent progress track (book-list resume bar etc). */
+  .progress-track {
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--bg-2);
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+  }
+
   /* Pending selection — painted while the selection popover is open so the
      user keeps a visible cue regardless of the live Selection state. Softer
      than the native ::selection because it's persistent, not transient. */

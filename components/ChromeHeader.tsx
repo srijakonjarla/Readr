@@ -18,24 +18,14 @@ export default function ChromeHeader() {
       <div className="flex items-center gap-3.5">
         <Link
           href="/"
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-white"
-          style={{ background: "var(--accent)" }}
+          className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-white"
           aria-label="Home"
         >
-          <span
-            style={{
-              fontWeight: 800,
-              fontSize: 16,
-              letterSpacing: "-0.02em",
-            }}
-          >
-            R
-          </span>
+          <span className="text-base font-extrabold tracking-[-0.02em]">R</span>
         </Link>
         <Link
           href="/"
-          className="text-[17px] font-bold tracking-tight text-ink"
-          style={{ letterSpacing: "-0.01em" }}
+          className="text-[17px] font-bold tracking-[-0.01em] text-ink"
         >
           Readr
         </Link>

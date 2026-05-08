@@ -43,36 +43,19 @@ function FloatingChrome({
         </button>
       </div>
 
-      <div
-        className="float-pill"
-        style={{
-          padding: "6px 14px",
-          fontSize: 12,
-          fontWeight: 500,
-          color: "var(--ink-2)",
-        }}
-      >
-        <span style={{ color: "var(--ink-3)" }}>Ch. {chapterIndex + 1}</span>
-        <span style={{ margin: "0 8px" }}>{chapterTitle || "—"}</span>
-        <span style={{ color: "var(--ink-3)", marginRight: 8 }}>·</span>
-        <span
-          style={{
-            fontVariantNumeric: "tabular-nums",
-            fontWeight: 600,
-            color: "var(--accent)",
-          }}
-        >
-          {pct}%
-        </span>
-        <span style={{ display: "none" }}>{chapterCount}</span>
+      <div className="float-pill px-3.5 py-1.5 text-xs font-medium text-ink-2">
+        <span className="text-ink-3">Ch. {chapterIndex + 1}</span>
+        <span className="mx-2">{chapterTitle || "—"}</span>
+        <span className="mr-2 text-ink-3">·</span>
+        <span className="font-semibold text-accent tabular-nums">{pct}%</span>
+        <span className="hidden">{chapterCount}</span>
       </div>
 
       <div className="float-pill">
         <button
           onClick={onToggleBookmark}
-          className="pill-btn"
+          className={`pill-btn ${bookmarked ? "text-accent" : ""}`}
           title={bookmarked ? "Bookmarked" : "Bookmark"}
-          style={bookmarked ? { color: "var(--accent)" } : undefined}
         >
           <Bookmark size={15} fill={bookmarked ? "currentColor" : "none"} />
         </button>

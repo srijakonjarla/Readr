@@ -54,7 +54,8 @@ export function useChapterLoader(book: Book): UseChapterLoaderResult {
           );
         }
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Unknown error";
+        const message =
+          error instanceof Error ? error.message : "Unknown error";
         console.error("Error fetching book details:", error);
         alert(`Error fetching book details: ${message}`);
       } finally {
@@ -84,7 +85,8 @@ export function useChapterLoader(book: Book): UseChapterLoaderResult {
         setChapterContent(html);
         window.scrollTo({ top: 0 });
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Unknown error";
+        const message =
+          error instanceof Error ? error.message : "Unknown error";
         if (!cancelled) {
           setChapterContent(`<p>Error loading chapter content: ${message}</p>`);
         }

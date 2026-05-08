@@ -17,9 +17,7 @@ export default function PreviewPage({
     <main>
       <MetadataPreview
         book={{ filename }}
-        onOpenBook={() =>
-          router.push(`/read/${encodeURIComponent(filename)}`)
-        }
+        onOpenBook={() => router.push(`/read/${encodeURIComponent(filename)}`)}
         onBackToLibrary={() => router.push("/")}
       />
     </main>

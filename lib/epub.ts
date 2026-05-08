@@ -27,7 +27,10 @@ const epubCache: Map<string, EpubCacheEntry> =
   globalForCache.__readrEpubCache ??
   (globalForCache.__readrEpubCache = new Map());
 
-async function parseEpubFresh(filePath: string, timeoutMs: number): Promise<EPub> {
+async function parseEpubFresh(
+  filePath: string,
+  timeoutMs: number,
+): Promise<EPub> {
   const epub = new EPub(filePath);
   await Promise.race([
     epub.parse(),
@@ -274,7 +277,8 @@ export function readEpubMetadata(epub: EPub): {
   author: string | null;
 } {
   const md = epub.metadata || ({} as Metadata);
-  const title = typeof md.title === "string" && md.title.trim() ? md.title : null;
+  const title =
+    typeof md.title === "string" && md.title.trim() ? md.title : null;
   const creator =
     typeof md.creator === "string" && md.creator.trim() ? md.creator : null;
   return { title, author: creator };

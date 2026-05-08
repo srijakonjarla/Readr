@@ -15,27 +15,20 @@ interface LeftRailDotsProps {
 function LeftRailDots({ toc, currentIndex, onSelect }: LeftRailDotsProps) {
   if (toc.length <= 1) return null;
   return (
-    <div
-      className="fixed top-1/2 z-30 flex flex-col gap-2.5"
-      style={{ left: 36, transform: "translateY(-50%)" }}
-    >
-      {toc.map((c, i) => (
-        <button
-          key={c.id}
-          onClick={() => onSelect(i)}
-          title={c.title}
-          style={{
-            width: i === currentIndex ? 18 : 6,
-            height: 6,
-            borderRadius: 3,
-            background: i === currentIndex ? "var(--accent)" : "var(--rule)",
-            transition: "all .25s ease",
-            border: "none",
-            cursor: "pointer",
-            padding: 0,
-          }}
-        />
-      ))}
+    <div className="fixed left-9 top-1/2 z-30 flex -translate-y-1/2 flex-col gap-2.5">
+      {toc.map((c, i) => {
+        const active = i === currentIndex;
+        return (
+          <button
+            key={c.id}
+            onClick={() => onSelect(i)}
+            title={c.title}
+            className={`h-1.5 cursor-pointer rounded-[3px] border-0 p-0 transition-all duration-[250ms] ease-in-out ${
+              active ? "w-[18px] bg-accent" : "w-1.5 bg-rule"
+            }`}
+          />
+        );
+      })}
     </div>
   );
 }

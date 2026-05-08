@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { ArrowRight, ArrowLeft } from "lucide-react";
 import type { Book, BookInfo } from "../types";
 import { bookGradient, bookHue, chipHueColor } from "../util/hue";
+import { FONT } from "../lib/styles";
 
 interface MetadataPreviewProps {
   book: Book;
@@ -71,106 +72,49 @@ function MetadataPreview({
 
   return (
     <section className="mx-auto max-w-page px-6 pb-32">
-      <div
-        className="card-hero"
-        style={{ display: "grid", gridTemplateColumns: "1fr 1.3fr" }}
-      >
+      <div className="card-hero grid grid-cols-[1fr_1.3fr]">
         {/* Left: gradient cover */}
         <div
-          style={{
-            padding: 40,
-            minHeight: 380,
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "flex-end",
-            background: bookGradient(hue),
-          }}
+          className="flex min-h-[380px] flex-col justify-end p-10"
+          style={{ background: bookGradient(hue) }}
         >
           <div
-            style={{
-              fontSize: 11,
-              fontWeight: 600,
-              color: chipHueColor(hue),
-              textTransform: "uppercase",
-              letterSpacing: "0.16em",
-              marginBottom: 14,
-            }}
+            className="mb-3.5 text-kicker font-semibold uppercase tracking-[0.16em]"
+            style={{ color: chipHueColor(hue) }}
           >
             {bookInfo.toc?.length || 0} chapter
             {bookInfo.toc?.length === 1 ? "" : "s"}
           </div>
           <div
-            style={{
-              fontFamily: '"Source Serif 4", Georgia, serif',
-              fontSize: 36,
-              fontWeight: 600,
-              color: "#fff",
-              lineHeight: 1.05,
-              letterSpacing: "-0.01em",
-              textWrap: "balance",
-              maxWidth: 320,
-            }}
+            className="max-w-[320px] text-[36px] font-semibold leading-[1.05] tracking-[-0.01em] text-white [text-wrap:balance]"
+            style={{ fontFamily: FONT.serif }}
           >
             {bookInfo.metadata?.title || "Untitled"}
           </div>
           {bookInfo.metadata?.creator && (
-            <div
-              style={{
-                fontSize: 14,
-                fontWeight: 500,
-                color: "rgba(255,255,255,.7)",
-                marginTop: 10,
-              }}
-            >
+            <div className="mt-2.5 text-sm font-medium text-white/70">
               {bookInfo.metadata.creator}
             </div>
           )}
         </div>
 
         {/* Right: meta + CTA */}
-        <div
-          style={{
-            padding: "40px 44px",
-            display: "flex",
-            flexDirection: "column",
-            gap: 24,
-          }}
-        >
+        <div className="flex flex-col gap-6 px-11 py-10">
           <div className="kicker">About this book</div>
           {bookInfo.metadata?.description ? (
             <div
-              className="reading-body"
-              style={{
-                fontSize: 17,
-                lineHeight: 1.6,
-                color: "var(--ink-2)",
-              }}
+              className="reading-body text-[17px] leading-[1.6] text-ink-2"
               dangerouslySetInnerHTML={{
                 __html: bookInfo.metadata.description,
               }}
             />
           ) : (
-            <p
-              style={{
-                fontSize: 14,
-                color: "var(--ink-3)",
-                fontStyle: "italic",
-                margin: 0,
-              }}
-            >
+            <p className="m-0 text-sm italic text-ink-3">
               No description provided.
             </p>
           )}
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(2, 1fr)",
-              gap: 24,
-              paddingTop: 16,
-              borderTop: "1px solid var(--rule-2)",
-            }}
-          >
+          <div className="grid grid-cols-2 gap-6 border-t border-rule-2 pt-4">
             <Stat
               label="Publisher"
               value={bookInfo.metadata?.publisher ?? "—"}
@@ -195,22 +139,8 @@ function MetadataPreview({
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div
-        className="text-ink-3"
-        style={{
-          fontSize: 11,
-          fontWeight: 600,
-          letterSpacing: "0.04em",
-          marginBottom: 6,
-          textTransform: "uppercase",
-        }}
-      >
-        {label}
-      </div>
-      <div
-        className="truncate text-ink"
-        style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em" }}
-      >
+      <div className="kicker mb-1.5 tracking-[0.04em]">{label}</div>
+      <div className="truncate text-base font-semibold tracking-[-0.01em] text-ink">
         {value}
       </div>
     </div>

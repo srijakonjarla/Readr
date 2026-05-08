@@ -83,9 +83,7 @@ export const MessageBody = z.object({
 export function parseOrError<T>(
   schema: ZodSchema<T>,
   value: unknown,
-):
-  | { ok: true; data: T }
-  | { ok: false; response: Response } {
+): { ok: true; data: T } | { ok: false; response: Response } {
   const result = schema.safeParse(value);
   if (!result.success) {
     return {

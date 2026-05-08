@@ -13,12 +13,12 @@ companion that respects spoiler boundaries.
 
 ## Pages
 
-| URL | Page | Notes |
-|---|---|---|
-| `/` | Library | Lists books. Click a card → `/preview/<filename>`. Hero "Resume" → `/read/<filename>`. Empty shelf redirects to `/upload`. |
-| `/upload` | Upload form | Drops a new `.epub` into `uploads/` and redirects to `/`. |
-| `/preview/[filename]` | Book preview card | Metadata + chapter count + "Start reading". |
-| `/read/[filename]` | Reader + chat panel | Owns per-book chat state (highlights, threads, messages). |
+| URL                   | Page                | Notes                                                                                                                      |
+| --------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `/`                   | Library             | Lists books. Click a card → `/preview/<filename>`. Hero "Resume" → `/read/<filename>`. Empty shelf redirects to `/upload`. |
+| `/upload`             | Upload form         | Drops a new `.epub` into `uploads/` and redirects to `/`.                                                                  |
+| `/preview/[filename]` | Book preview card   | Metadata + chapter count + "Start reading".                                                                                |
+| `/read/[filename]`    | Reader + chat panel | Owns per-book chat state (highlights, threads, messages).                                                                  |
 
 The site-wide header (R logo, theme toggle, +Add EPUB, ←Library) lives in
 `app/layout.tsx` and is rendered on every route. Theme state is held by
