@@ -6,9 +6,13 @@ node_modules/
 # Testing
 /coverage
 
-# Production
+# Build / production output
 /build
 /dist
+/.next
+/out
+*.tsbuildinfo
+.swc/
 
 # Misc
 .DS_Store
@@ -17,22 +21,29 @@ node_modules/
 .env.development.local
 .env.test.local
 .env.production.local
+*.log
+.vercel
+.turbo
 
 # Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
 # IDE
 .idea/
 .vscode/
+.cursor/
 *.swp
 *.swo
 
-# Uploads directory
+# Design references (not part of build)
+design_handoff_readr/
+
+# Uploads directory (preserve a placeholder so the dir is committed)
 /uploads/*
 !/uploads/.gitkeep
 
-
 # SQLite database (created at runtime)
-data/
+/data/
