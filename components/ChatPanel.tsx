@@ -26,6 +26,7 @@ interface ChatPanelProps {
   onUpdateStreamingText: (threadId: string, fullText: string) => void;
   onCommitStreamingMessage: (threadId: string, msg: ChatMessage) => void;
   onClearThread: (threadId: string) => void;
+  onDeleteThread: (threadId: string) => void;
   onRemoveLastMessage: (threadId: string) => void;
   pendingPrompt: string | null;
   clearPendingPrompt: () => void;
@@ -70,6 +71,7 @@ function ChatPanel({
   onUpdateStreamingText,
   onCommitStreamingMessage,
   onClearThread,
+  onDeleteThread,
   onRemoveLastMessage,
   pendingPrompt,
   clearPendingPrompt,
@@ -272,41 +274,51 @@ function ChatPanel({
         </button>
       </div>
 
-      {/* Toolbar (Clear) */}
-      {asks.length > 0 && activeThread && (
+      {/* Toolbar (Clear) — always visible so it persists across both contexts;
+          disabled when there's nothing to clear or while a request is in flight. */}
+      {activeThread && (
         <div
           className="flex items-center justify-end gap-2 px-5 py-1.5"
           style={{ borderBottom: "1px solid var(--rule-2)" }}
         >
-          <button
-            onClick={() => {
-              if (sending) return;
-              if (
-                window.confirm(
-                  "Clear all asks in this context? Anchored selection (if any) will be kept.",
-                )
-              ) {
-                onClearThread(activeThread.id);
-              }
-            }}
-            disabled={sending}
-            style={{
-              all: "unset",
-              cursor: sending ? "not-allowed" : "pointer",
-              opacity: sending ? 0.5 : 1,
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "4px 10px",
-              borderRadius: 999,
-              fontSize: 11,
-              fontWeight: 500,
-              color: "var(--ink-3)",
-            }}
-            title="Clear all asks in this context"
-          >
-            <Trash2 size={12} /> Clear
-          </button>
+          {(() => {
+            const canClear = !sending && asks.length > 0;
+            return (
+              <button
+                onClick={() => {
+                  if (!canClear) return;
+                  if (
+                    window.confirm(
+                      "Clear all asks in this context? Anchored selection (if any) will be kept.",
+                    )
+                  ) {
+                    onClearThread(activeThread.id);
+                  }
+                }}
+                disabled={!canClear}
+                style={{
+                  all: "unset",
+                  cursor: canClear ? "pointer" : "not-allowed",
+                  opacity: canClear ? 1 : 0.4,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "4px 10px",
+                  borderRadius: 999,
+                  fontSize: 11,
+                  fontWeight: 500,
+                  color: "var(--ink-3)",
+                }}
+                title={
+                  asks.length === 0
+                    ? "Nothing to clear in this context"
+                    : "Clear all asks in this context"
+                }
+              >
+                <Trash2 size={12} /> Clear
+              </button>
+            );
+          })()}
         </div>
       )}
 
@@ -358,20 +370,60 @@ function ChatPanel({
           </span>
           {threads.map((t) => {
             const active = t.id === activeThreadId;
+            const deletable = t.id !== "main";
             return (
-              <button
+              <span
                 key={t.id}
-                onClick={() => onSwitchThread(t.id)}
                 className="nav-chip"
                 aria-pressed={active}
                 style={{
                   fontSize: 11,
-                  padding: "4px 10px",
+                  padding: "4px 4px 4px 10px",
                   whiteSpace: "nowrap",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
                 }}
               >
-                {t.title}
-              </button>
+                <button
+                  onClick={() => onSwitchThread(t.id)}
+                  style={{
+                    all: "unset",
+                    cursor: "pointer",
+                    color: "inherit",
+                    font: "inherit",
+                  }}
+                >
+                  {t.title}
+                </button>
+                {deletable && (
+                  <button
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          `Delete context "${t.title}"? Asks here will be lost.`,
+                        )
+                      ) {
+                        onDeleteThread(t.id);
+                      }
+                    }}
+                    aria-label={`Delete context ${t.title}`}
+                    title="Delete context"
+                    style={{
+                      all: "unset",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      padding: 2,
+                      borderRadius: 999,
+                      color: "var(--ink-3)",
+                      opacity: 0.7,
+                    }}
+                  >
+                    <X size={11} />
+                  </button>
+                )}
+              </span>
             );
           })}
         </div>

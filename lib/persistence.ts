@@ -70,3 +70,9 @@ export function persistRemoveLastMessage(threadId: string): void {
     method: "DELETE",
   }).catch((e) => log("removeLastMessage", e));
 }
+
+export function persistDeleteThread(threadId: string): void {
+  void fetch(`/api/threads/${encodeURIComponent(threadId)}`, {
+    method: "DELETE",
+  }).catch((e) => log("deleteThread", e));
+}

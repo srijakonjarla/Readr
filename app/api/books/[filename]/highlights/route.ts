@@ -26,6 +26,6 @@ export async function POST(
     ...bodyValidated.data,
     filename: fnameValidated.data.filename,
   };
-  insertHighlight(h);
+  await insertHighlight(h);
   return Response.json(h, { status: 201 });
 }

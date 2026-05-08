@@ -15,8 +15,9 @@ export async function GET(
   if (!validated.ok) return validated.response;
   const { filename } = validated.data;
 
-  return Response.json({
-    highlights: listHighlights(filename),
-    threads: listThreads(filename),
-  });
+  const [highlights, threads] = await Promise.all([
+    listHighlights(filename),
+    listThreads(filename),
+  ]);
+  return Response.json({ highlights, threads });
 }

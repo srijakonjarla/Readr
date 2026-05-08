@@ -1,4 +1,4 @@
-import { db } from "./index";
+import { sql } from "./index";
 
 export interface DbHighlight {
   id: string;
@@ -30,28 +30,20 @@ const rowToHighlight = (r: Row): DbHighlight => ({
   threadCount: r.thread_count ?? undefined,
 });
 
-export function listHighlights(filename: string): DbHighlight[] {
-  const stmt = db.prepare(
-    "SELECT * FROM highlights WHERE filename = ? ORDER BY created_at",
-  );
-  return (stmt.all(filename) as unknown as Row[]).map(rowToHighlight);
+export async function listHighlights(filename: string): Promise<DbHighlight[]> {
+  const rows = await sql<Row[]>`
+    SELECT * FROM highlights WHERE filename = ${filename} ORDER BY created_at
+  `;
+  return rows.map(rowToHighlight);
 }
 
-export function insertHighlight(h: DbHighlight): void {
-  db.prepare(
-    `INSERT INTO highlights (id, filename, kind, chapter_id, chapter_index, text, thread_count)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-  ).run(
-    h.id,
-    h.filename,
-    h.kind,
-    h.chapterId,
-    h.chapterIndex,
-    h.text,
-    h.threadCount ?? null,
-  );
+export async function insertHighlight(h: DbHighlight): Promise<void> {
+  await sql`
+    INSERT INTO highlights (id, filename, kind, chapter_id, chapter_index, text, thread_count)
+    VALUES (${h.id}, ${h.filename}, ${h.kind}, ${h.chapterId}, ${h.chapterIndex}, ${h.text}, ${h.threadCount ?? null})
+  `;
 }
 
-export function deleteHighlight(id: string): void {
-  db.prepare("DELETE FROM highlights WHERE id = ?").run(id);
+export async function deleteHighlight(id: string): Promise<void> {
+  await sql`DELETE FROM highlights WHERE id = ${id}`;
 }

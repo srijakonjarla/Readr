@@ -164,6 +164,7 @@
   /* Buttons */
   .btn-cta {
     all: unset;
+    box-sizing: border-box;
     cursor: pointer;
     padding: 9px 16px;
     border-radius: 8px;
@@ -186,6 +187,7 @@
   }
   .btn-ink {
     all: unset;
+    box-sizing: border-box;
     cursor: pointer;
     padding: 12px 20px;
     border-radius: 10px;
@@ -203,6 +205,7 @@
   }
   .btn-soft {
     all: unset;
+    box-sizing: border-box;
     cursor: pointer;
     padding: 8px 14px;
     border-radius: 8px;
@@ -287,6 +290,16 @@
     color: var(--ink-3);
     letter-spacing: 0.08em;
     text-transform: uppercase;
+  }
+
+  /* Pending selection — painted while the selection popover is open so the
+     user keeps a visible cue regardless of the live Selection state. Softer
+     than the native ::selection because it's persistent, not transient. */
+  mark.rd-pending {
+    background: color-mix(in oklab, var(--accent) 18%, transparent);
+    color: inherit;
+    padding: 0;
+    border-radius: 0;
   }
 
   /* Reading pane mark */

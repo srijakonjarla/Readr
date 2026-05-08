@@ -22,7 +22,7 @@ export async function POST(
   const bodyValidated = parseOrError(ThreadBody, body);
   if (!bodyValidated.ok) return bodyValidated.response;
 
-  insertThread({
+  await insertThread({
     ...bodyValidated.data,
     filename: fnameValidated.data.filename,
   });

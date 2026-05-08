@@ -1,6 +1,4 @@
-import path from "node:path";
-import fs from "node:fs";
-import { loadEpub, UPLOADS_DIR } from "@/lib/epub";
+import { getAsset } from "@/lib/db/books";
 import { AssetParams, parseOrError } from "@/lib/schemas";
 
 export const runtime = "nodejs";
@@ -17,21 +15,13 @@ export async function GET(
   if (!validated.ok) return validated.response;
   const { filename, assetId } = validated.data;
 
-  const filePath = path.join(UPLOADS_DIR, filename);
-  if (!fs.existsSync(filePath)) return new Response(null, { status: 404 });
-
   try {
-    const epub = await loadEpub(filePath);
-    let asset: { data: Buffer; mimeType: string };
-    try {
-      asset = await epub.getImage(assetId);
-    } catch {
-      asset = await epub.getFile(assetId);
-    }
-    return new Response(new Uint8Array(asset.data), {
+    const asset = await getAsset(filename, assetId);
+    if (!asset) return new Response(null, { status: 404 });
+    return new Response(new Uint8Array(asset.bytes), {
       status: 200,
       headers: {
-        "Content-Type": asset.mimeType || "application/octet-stream",
+        "Content-Type": asset.mime || "application/octet-stream",
         "Cache-Control": "public, max-age=86400",
       },
     });

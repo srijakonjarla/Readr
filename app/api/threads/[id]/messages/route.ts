@@ -23,7 +23,7 @@ export async function POST(
   if (!msgValidated.ok) return msgValidated.response;
 
   const msg = msgValidated.data;
-  appendMessage(idValidated.data.id, {
+  await appendMessage(idValidated.data.id, {
     role: msg.role,
     text: msg.text,
     anchor: msg.anchor ?? false,
@@ -40,6 +40,6 @@ export async function DELETE(
     id: decodeURIComponent(params.id),
   });
   if (!validated.ok) return validated.response;
-  clearMessages(validated.data.id);
+  await clearMessages(validated.data.id);
   return new Response(null, { status: 204 });
 }

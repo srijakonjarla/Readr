@@ -1,13 +1,4 @@
-import path from "node:path";
-import fs from "node:fs";
-import {
-  buildHrefToId,
-  loadEpub,
-  rewriteImageSources,
-  sanitizeChapterHtml,
-  stripEpubStyles,
-  UPLOADS_DIR,
-} from "@/lib/epub";
+import { getChapter } from "@/lib/db/books";
 import { ChapterParams, parseOrError } from "@/lib/schemas";
 
 export const runtime = "nodejs";
@@ -24,19 +15,12 @@ export async function GET(
   if (!validated.ok) return validated.response;
   const { filename, chapterId } = validated.data;
 
-  const filePath = path.join(UPLOADS_DIR, filename);
-  if (!fs.existsSync(filePath)) {
-    return Response.json({ error: "File not found" }, { status: 404 });
-  }
-
   try {
-    const epub = await loadEpub(filePath);
-    const rawText = await epub.getChapter(chapterId);
-    const stripped = stripEpubStyles(rawText || "");
-    const hrefToId = buildHrefToId(epub);
-    const rewritten = rewriteImageSources(stripped, hrefToId, filename);
-    const text = sanitizeChapterHtml(rewritten);
-    return new Response(text, {
+    const chapter = await getChapter(filename, chapterId);
+    if (!chapter) {
+      return Response.json({ error: "Chapter not found" }, { status: 404 });
+    }
+    return new Response(chapter.html, {
       status: 200,
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });

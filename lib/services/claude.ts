@@ -1,5 +1,4 @@
 import Anthropic from "@anthropic-ai/sdk";
-import "dotenv/config";
 import type { BookJsonData } from "@/shared/api";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });

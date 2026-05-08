@@ -1,12 +1,4 @@
-import path from "node:path";
-import fs from "node:fs";
-import type { ManifestItem, TocElement } from "epub";
-import {
-  buildTocTitleMaps,
-  loadEpub,
-  resolveChapterTitle,
-  UPLOADS_DIR,
-} from "@/lib/epub";
+import { getBook, listChapters } from "@/lib/db/books";
 import { FileParams, parseOrError } from "@/lib/schemas";
 import type { TocItem } from "@/shared/api";
 
@@ -23,33 +15,31 @@ export async function GET(
   if (!validated.ok) return validated.response;
   const { filename } = validated.data;
 
-  const filePath = path.join(UPLOADS_DIR, filename);
-  if (!fs.existsSync(filePath)) {
-    return Response.json({ error: "File not found" }, { status: 404 });
-  }
-
   try {
-    const epub = await loadEpub(filePath);
-    const useFlow = epub.flow && epub.flow.length > 0;
-    const chapterSource: Array<ManifestItem | TocElement> = useFlow
-      ? epub.flow
-      : epub.toc;
-
-    let toc: TocItem[] = [];
-    if (chapterSource && chapterSource.length > 0) {
-      const tocMaps = buildTocTitleMaps(epub);
-      toc = chapterSource.map((item, index) => ({
-        id: item.id,
-        href: item.href,
-        title: resolveChapterTitle(item, index, tocMaps),
-      }));
+    const [book, chapters] = await Promise.all([
+      getBook(filename),
+      listChapters(filename),
+    ]);
+    if (!book) {
+      return Response.json({ error: "File not found" }, { status: 404 });
     }
-
-    return Response.json({ metadata: epub.metadata, toc, filename });
+    const toc: TocItem[] = chapters.map((c) => ({
+      id: c.chapterId,
+      href: "",
+      title: c.title ?? `Chapter ${c.idx + 1}`,
+    }));
+    return Response.json({
+      metadata: {
+        title: book.title ?? filename,
+        creator: book.author ?? "",
+      },
+      toc,
+      filename,
+    });
   } catch (error) {
     console.error(`[GET /api/files/${filename}]`, error);
     return Response.json(
-      { error: "Failed to parse EPUB file" },
+      { error: "Failed to load book" },
       { status: 500 },
     );
   }

@@ -12,6 +12,6 @@ export async function DELETE(
     id: decodeURIComponent(params.id),
   });
   if (!validated.ok) return validated.response;
-  removeLastMessage(validated.data.id);
+  await removeLastMessage(validated.data.id);
   return new Response(null, { status: 204 });
 }

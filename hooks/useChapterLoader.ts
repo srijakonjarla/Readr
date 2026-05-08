@@ -22,13 +22,16 @@ export function useChapterLoader(book: Book): UseChapterLoaderResult {
 
   // Initial load: book metadata + TOC. Restore last-read chapter from
   // localStorage when present, else start at 0.
+  // Depend on `book.filename` (primitive) — depending on `book` (object)
+  // would re-fire this effect on every parent re-render.
+  const filename = book.filename;
   useEffect(() => {
     let cancelled = false;
     const fetchBookDetails = async (): Promise<void> => {
       setLoading(true);
       try {
         const response = await fetch(
-          `/api/files/${encodeURIComponent(book.filename)}`,
+          `/api/files/${encodeURIComponent(filename)}`,
         );
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -38,7 +41,7 @@ export function useChapterLoader(book: Book): UseChapterLoaderResult {
         setBookInfo(data);
         setToc(data.toc || []);
         const remembered = window.localStorage.getItem(
-          lastChapterKey(book.filename),
+          lastChapterKey(filename),
         );
         const initialIdx = remembered ? Number.parseInt(remembered, 10) : 0;
         if (data.toc && data.toc.length > 0) {
@@ -62,7 +65,7 @@ export function useChapterLoader(book: Book): UseChapterLoaderResult {
     return () => {
       cancelled = true;
     };
-  }, [book]);
+  }, [filename]);
 
   // Load HTML for the active chapter and persist position.
   useEffect(() => {

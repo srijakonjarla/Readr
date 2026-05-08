@@ -1,5 +1,4 @@
 import OpenAI from "openai";
-import "dotenv/config";
 import type { BookJsonData } from "@/shared/api";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });

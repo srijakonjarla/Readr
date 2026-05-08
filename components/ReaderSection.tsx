@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -77,11 +77,23 @@ function ReaderSection({
   }, [selPopover, dismissSelection]);
   const scrollPct = useScrollProgress(onScrollDismissSelection);
 
-  // Derive per-chapter highlight slice.
+  // Derive per-chapter highlight slice. Memoized so unrelated re-renders
+  // (e.g. opening the selection popover) don't produce a new array identity
+  // — the highlight painter depends on this array and its DOM-mutation pass
+  // would otherwise collapse the user's live text selection.
   const currentChapter = toc[currentChapterIndex];
   const chapterTitle = currentChapter?.title ?? "";
-  const chapterHighlights = highlights.filter(
-    (h) => h.chapterIndex === currentChapterIndex,
+  const chapterHighlights = useMemo(
+    () =>
+      highlights.filter((h) => h.chapterIndex === currentChapterIndex),
+    [highlights, currentChapterIndex],
+  );
+  // Stable object identity for dangerouslySetInnerHTML — without this, React
+  // sees a new wrapper each render and re-applies innerHTML, which destroys
+  // every Text node in the chapter (and any Range pointing at them).
+  const bodyHtml = useMemo(
+    () => ({ __html: chapterContent }),
+    [chapterContent],
   );
   const threadCount = chapterHighlights.filter(
     (h) => h.kind === "thread",
@@ -252,7 +264,7 @@ function ReaderSection({
           ref={bodyRef}
           className="reading-body"
           onClick={handleBodyClick}
-          dangerouslySetInnerHTML={{ __html: chapterContent }}
+          dangerouslySetInnerHTML={bodyHtml}
         />
 
         {currentChapterIndex < toc.length - 1 && (

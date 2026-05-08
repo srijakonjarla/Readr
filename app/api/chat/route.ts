@@ -1,6 +1,5 @@
-import path from "node:path";
 import { ChatBody, parseOrError } from "@/lib/schemas";
-import { loadBookJsonStructure, UPLOADS_DIR } from "@/lib/epub";
+import { loadBookJsonFromDb } from "@/lib/epub";
 import { getOpenAIStream } from "@/lib/services/openai";
 import { getClaudeStream } from "@/lib/services/claude";
 import type { BookJsonData } from "@/shared/api";
@@ -29,8 +28,7 @@ export async function POST(req: Request): Promise<Response> {
   // Load + spoiler-trim the book context.
   let trimmedBookJson: BookJsonData;
   try {
-    const filePath = path.join(UPLOADS_DIR, filename);
-    const bookJsonData = await loadBookJsonStructure(filePath);
+    const bookJsonData = await loadBookJsonFromDb(filename);
     const totalChapters = bookJsonData.chapters.length;
     const cutoff =
       typeof currentChapterIndex === "number" && currentChapterIndex >= 0

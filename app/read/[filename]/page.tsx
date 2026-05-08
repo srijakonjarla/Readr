@@ -7,6 +7,7 @@ import ChatPanel from "@/components/ChatPanel";
 import {
   fetchBookState,
   persistClearMessages,
+  persistDeleteThread,
   persistHighlight,
   persistMessage,
   persistRemoveHighlight,
@@ -118,6 +119,17 @@ export default function ReaderPage({
     persistClearMessages(threadId);
   };
 
+  const removeThread = (threadId: string): void => {
+    if (threadId === "main") return;
+    setThreads((prev) => prev.filter((t) => t.id !== threadId));
+    // Threads created from a highlight share id with the highlight; remove
+    // both so the chapter's anchor mark goes away too.
+    setHighlights((prev) => prev.filter((h) => h.id !== threadId));
+    persistDeleteThread(threadId);
+    persistRemoveHighlight(threadId);
+    if (activeThreadId === threadId) setActiveThreadId("main");
+  };
+
   const removeLastMessage = (threadId: string): void => {
     setThreads((prev) =>
       prev.map((t) =>
@@ -205,6 +217,7 @@ export default function ReaderPage({
         onUpdateStreamingText={updateStreamingText}
         onCommitStreamingMessage={commitStreamingMessage}
         onClearThread={clearThread}
+        onDeleteThread={removeThread}
         onRemoveLastMessage={removeLastMessage}
         pendingPrompt={pendingPrompt}
         clearPendingPrompt={() => setPendingPrompt(null)}

@@ -1,4 +1,4 @@
-import { db } from "./index";
+import { sql } from "./index";
 
 export interface DbMessage {
   role: "user" | "assistant";
@@ -46,18 +46,16 @@ const rowToMessage = (r: MessageRow): DbMessage => ({
   anchor: r.anchor === 1,
 });
 
-export function listThreads(filename: string): DbThread[] {
-  const threadRows = db
-    .prepare("SELECT * FROM threads WHERE filename = ? ORDER BY created_at")
-    .all(filename) as unknown as ThreadRow[];
+export async function listThreads(filename: string): Promise<DbThread[]> {
+  const threadRows = await sql<ThreadRow[]>`
+    SELECT * FROM threads WHERE filename = ${filename} ORDER BY created_at
+  `;
   if (threadRows.length === 0) return [];
 
-  const messageRows = db
-    .prepare(
-      `SELECT m.* FROM messages m JOIN threads t ON m.thread_id = t.id
-       WHERE t.filename = ? ORDER BY m.thread_id, m.id`,
-    )
-    .all(filename) as unknown as MessageRow[];
+  const messageRows = await sql<MessageRow[]>`
+    SELECT m.* FROM messages m JOIN threads t ON m.thread_id = t.id
+    WHERE t.filename = ${filename} ORDER BY m.thread_id, m.id
+  `;
 
   const messagesByThread = new Map<string, DbMessage[]>();
   for (const m of messageRows) {
@@ -71,34 +69,38 @@ export function listThreads(filename: string): DbThread[] {
   );
 }
 
-export function insertThread(t: Omit<DbThread, "messages">): void {
-  db.prepare(
-    `INSERT INTO threads (id, filename, title, anchor_text, chapter_index)
-     VALUES (?, ?, ?, ?, ?)`,
-  ).run(t.id, t.filename, t.title, t.anchor?.text ?? null, t.chapterIndex);
+export async function insertThread(
+  t: Omit<DbThread, "messages">,
+): Promise<void> {
+  await sql`
+    INSERT INTO threads (id, filename, title, anchor_text, chapter_index)
+    VALUES (${t.id}, ${t.filename}, ${t.title}, ${t.anchor?.text ?? null}, ${t.chapterIndex})
+  `;
 }
 
-export function deleteThread(id: string): void {
-  db.prepare("DELETE FROM threads WHERE id = ?").run(id);
+export async function deleteThread(id: string): Promise<void> {
+  await sql`DELETE FROM threads WHERE id = ${id}`;
 }
 
-export function appendMessage(threadId: string, msg: DbMessage): void {
-  db.prepare(
-    `INSERT INTO messages (thread_id, role, text, anchor)
-     VALUES (?, ?, ?, ?)`,
-  ).run(threadId, msg.role, msg.text, msg.anchor ? 1 : 0);
+export async function appendMessage(
+  threadId: string,
+  msg: DbMessage,
+): Promise<void> {
+  await sql`
+    INSERT INTO messages (thread_id, role, text, anchor)
+    VALUES (${threadId}, ${msg.role}, ${msg.text}, ${msg.anchor ? 1 : 0})
+  `;
 }
 
-export function clearMessages(threadId: string): void {
-  db.prepare("DELETE FROM messages WHERE thread_id = ?").run(threadId);
+export async function clearMessages(threadId: string): Promise<void> {
+  await sql`DELETE FROM messages WHERE thread_id = ${threadId}`;
 }
 
-export function removeLastMessage(threadId: string): void {
-  const row = db
-    .prepare(
-      "SELECT id FROM messages WHERE thread_id = ? ORDER BY id DESC LIMIT 1",
-    )
-    .get(threadId) as unknown as { id: number } | undefined;
-  if (!row) return;
-  db.prepare("DELETE FROM messages WHERE id = ?").run(row.id);
+export async function removeLastMessage(threadId: string): Promise<void> {
+  const rows = await sql<{ id: number }[]>`
+    SELECT id FROM messages WHERE thread_id = ${threadId}
+    ORDER BY id DESC LIMIT 1
+  `;
+  if (rows.length === 0) return;
+  await sql`DELETE FROM messages WHERE id = ${rows[0].id}`;
 }

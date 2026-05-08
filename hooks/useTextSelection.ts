@@ -12,19 +12,80 @@ export interface SelectionPopoverState {
   text: string;
 }
 
+// Walk all text nodes intersecting `range`, wrap each one's in-range portion
+// with a <mark class={className}>. Returns the inserted marks so the caller
+// can remove them on dismiss.
+function wrapRangeWithMarks(
+  range: Range,
+  className: string,
+): HTMLElement[] {
+  const marks: HTMLElement[] = [];
+  const startNode = range.startContainer;
+  const endNode = range.endContainer;
+  const startOffset = range.startOffset;
+  const endOffset = range.endOffset;
+
+  // Single-text-node selection — wrap directly.
+  if (startNode === endNode && startNode.nodeType === Node.TEXT_NODE) {
+    try {
+      const m = document.createElement("mark");
+      m.className = className;
+      const r = document.createRange();
+      r.setStart(startNode, startOffset);
+      r.setEnd(endNode, endOffset);
+      r.surroundContents(m);
+      marks.push(m);
+    } catch {
+      // Surround failed — skip silently.
+    }
+    return marks;
+  }
+
+  // Multi-node selection — collect intersecting text nodes first, then wrap.
+  // Collecting first avoids walker invalidation as we mutate the DOM.
+  const ancestor =
+    range.commonAncestorContainer.nodeType === Node.TEXT_NODE
+      ? range.commonAncestorContainer.parentNode
+      : range.commonAncestorContainer;
+  if (!ancestor) return marks;
+
+  const walker = document.createTreeWalker(ancestor, NodeFilter.SHOW_TEXT, {
+    acceptNode: (n) =>
+      range.intersectsNode(n)
+        ? NodeFilter.FILTER_ACCEPT
+        : NodeFilter.FILTER_REJECT,
+  });
+  const textNodes: Text[] = [];
+  let n: Node | null;
+  while ((n = walker.nextNode())) textNodes.push(n as Text);
+
+  for (const tn of textNodes) {
+    const localStart = tn === startNode ? startOffset : 0;
+    const localEnd = tn === endNode ? endOffset : tn.length;
+    if (localEnd <= localStart) continue;
+    try {
+      const m = document.createElement("mark");
+      m.className = className;
+      const r = document.createRange();
+      r.setStart(tn, localStart);
+      r.setEnd(tn, localEnd);
+      r.surroundContents(m);
+      marks.push(m);
+    } catch {
+      // skip
+    }
+  }
+  return marks;
+}
+
 /**
  * Watch for text selections inside `bodyRef`. Whenever the user finishes a
  * selection (mouseup / keyup) of >=3 characters, return the popover position
- * + selected text. Auto-clears on collapse.
- *
- * Robustness: stores a clone of the Range so that — if the browser ever
- * clears the selection while the popover is open (e.g., due to a focus
- * shift or DOM mutation by an unrelated component) — we re-apply it so the
- * highlighted text stays visibly selected.
+ * + selected text. While the popover is open, paint a <mark class="rd-pending">
+ * over the saved range so the user keeps a visible highlight regardless of
+ * what the browser does to the live Selection.
  */
-export function useTextSelection(
-  bodyRef: RefObject<HTMLElement | null>,
-): {
+export function useTextSelection(bodyRef: RefObject<HTMLElement | null>): {
   popover: SelectionPopoverState | null;
   dismiss: () => void;
 } {
@@ -51,8 +112,6 @@ export function useTextSelection(
       savedRangeRef.current = null;
       return;
     }
-    // Clone the range so it stays alive even if the browser collapses the
-    // live selection during subsequent re-renders.
     savedRangeRef.current = range.cloneRange();
     const rect = range.getBoundingClientRect();
     setPopover({ x: rect.left + rect.width / 2, y: rect.top - 12, text });
@@ -60,7 +119,6 @@ export function useTextSelection(
 
   useEffect(() => {
     const handler = (): void => {
-      // Defer to next tick so the browser has finished updating the selection
       setTimeout(computeFromSelection, 1);
     };
     document.addEventListener("mouseup", handler);
@@ -71,31 +129,30 @@ export function useTextSelection(
     };
   }, [computeFromSelection]);
 
-  // While the popover is open, keep the visual selection alive. If anything
-  // collapses the live selection, restore our saved range.
+  // While the popover is open, paint a temporary mark over the saved range so
+  // the user sees the visual selection consistently — independent of the
+  // browser's live Selection state, which various flows can collapse.
   useEffect(() => {
     if (!popover) return;
-    const restore = (): void => {
-      const saved = savedRangeRef.current;
-      if (!saved) return;
-      const sel = window.getSelection();
-      if (!sel) return;
-      const live = sel.rangeCount > 0 ? sel.getRangeAt(0) : null;
-      // If selection was collapsed or replaced, put our range back.
-      if (!live || sel.isCollapsed || sel.toString().trim() !== popover.text) {
-        sel.removeAllRanges();
-        try {
-          sel.addRange(saved.cloneRange());
-        } catch {
-          // ignore — saved range may have been invalidated
-        }
+    const saved = savedRangeRef.current;
+    const root = bodyRef.current;
+    if (!saved || !root) return;
+    // Drop the live selection before painting — otherwise the browser's
+    // ::selection layer composites on top of our rd-pending marks (and
+    // tracks our DOM mutations unevenly), producing a darker stripe over
+    // the portion of the range still considered "live".
+    window.getSelection()?.removeAllRanges();
+    const marks = wrapRangeWithMarks(saved, "rd-pending");
+    return () => {
+      for (const m of marks) {
+        const parent = m.parentNode;
+        if (!parent) continue;
+        while (m.firstChild) parent.insertBefore(m.firstChild, m);
+        parent.removeChild(m);
       }
+      root.normalize();
     };
-    // Run once after render, then again on each selectionchange while popover open.
-    restore();
-    document.addEventListener("selectionchange", restore);
-    return () => document.removeEventListener("selectionchange", restore);
-  }, [popover]);
+  }, [popover, bodyRef]);
 
   const dismiss = useCallback((): void => {
     window.getSelection()?.removeAllRanges();

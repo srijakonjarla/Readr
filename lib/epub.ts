@@ -1,11 +1,13 @@
-import fs from "node:fs";
 import { promises as fsp } from "node:fs";
-import path from "node:path";
 import { EPub, type ManifestItem, type Metadata, type TocElement } from "epub";
 import DOMPurify from "isomorphic-dompurify";
 import type { BookChapter, BookJsonData } from "@/shared/api";
-
-export const UPLOADS_DIR = path.join(process.cwd(), "uploads");
+import {
+  getBook,
+  listChapters,
+  type DbAsset,
+  type DbChapter,
+} from "@/lib/db/books";
 
 // ─── Parsed-EPUB LRU cache ──────────────────────────────────────────────────
 // Parsing reads the entire EPUB zip and walks the manifest, which is too
@@ -183,95 +185,133 @@ export function sanitizeChapterHtml(html: string): string {
   });
 }
 
-// ─── Whole-book JSON for chat context ──────────────────────────────────────
-const MAX_CHARS_PER_CHAPTER_JSON = 5000;
+// ─── Upload-time extraction (parse EPUB → DB rows) ─────────────────────────
 
-export async function loadBookJsonStructure(
-  filePath: string,
-): Promise<BookJsonData> {
-  if (!fs.existsSync(filePath)) {
-    throw new Error("Book file not found.");
-  }
+export interface ChapterRefForToc {
+  id: string;
+  href: string;
+  title: string;
+}
 
-  let epub: EPub;
-  try {
-    epub = await loadEpub(filePath);
-  } catch (error) {
-    console.error("[loadBookJsonStructure] EPUB parsing error:", error);
-    throw new Error("Failed to parse EPUB file.");
-  }
-
-  const bookJson: BookJsonData = {
-    metadata: epub.metadata || ({} as Metadata),
-    chapters: [],
-  };
-
+export function listChapterRefs(epub: EPub): ChapterRefForToc[] {
   const useFlow = epub.flow && epub.flow.length > 0;
-  const chapterList: Array<ManifestItem | TocElement> = useFlow
+  const source: Array<ManifestItem | TocElement> = useFlow
     ? epub.flow
     : epub.toc || [];
-
-  if (chapterList.length === 0) return bookJson;
-
+  if (source.length === 0) return [];
   const tocMaps = buildTocTitleMaps(epub);
-  const chapterPromises: Promise<BookChapter>[] = chapterList.map(
-    async (chapterRef, index) => {
-      const fallbackTitle = resolveChapterTitle(chapterRef, index, tocMaps);
-      try {
-        const text = await epub.getChapter(chapterRef.id);
-        let plainText = text
-          .replace(/<[^>]*>/g, " ")
-          .replace(/\s+/g, " ")
-          .trim();
-        let truncated = false;
-        if (plainText.length > MAX_CHARS_PER_CHAPTER_JSON) {
-          plainText =
-            plainText.substring(0, MAX_CHARS_PER_CHAPTER_JSON) +
-            "... (truncated)";
-          truncated = true;
-        }
-        return {
-          id: chapterRef.id,
-          title: fallbackTitle,
-          content: plainText,
-          truncated,
-        };
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        return {
-          id: chapterRef.id,
-          title: fallbackTitle,
-          content: null,
-          error: message,
-        };
-      }
-    },
-  );
-
-  bookJson.chapters = await Promise.all(chapterPromises);
-  return bookJson;
+  return source.map((item, index) => ({
+    id: item.id,
+    href: typeof item.href === "string" ? item.href : "",
+    title: resolveChapterTitle(item, index, tocMaps),
+  }));
 }
 
-export interface BookSummary {
-  filename: string;
-  metadata: Metadata;
-}
-
-export async function getEpubSummary(
-  filePath: string,
+export async function extractChaptersForUpload(
+  epub: EPub,
   filename: string,
-  timeoutMs = 15_000,
-): Promise<BookSummary | null> {
-  if (!fs.existsSync(filePath)) return null;
-  try {
-    const epub = await loadEpub(filePath, timeoutMs);
-    return {
+): Promise<DbChapter[]> {
+  const refs = listChapterRefs(epub);
+  if (refs.length === 0) return [];
+  const hrefToId = buildHrefToId(epub);
+  const chapters: DbChapter[] = [];
+  // Dedupe by chapter_id — some EPUBs have multiple TOC entries pointing at
+  // the same XHTML file (different #anchors); they'd otherwise collide on the
+  // (filename, chapter_id) primary key.
+  const seen = new Set<string>();
+  for (let i = 0; i < refs.length; i++) {
+    const ref = refs[i];
+    if (seen.has(ref.id)) continue;
+    seen.add(ref.id);
+    let html = "";
+    try {
+      const raw = await epub.getChapter(ref.id);
+      const stripped = stripEpubStyles(raw || "");
+      const rewritten = rewriteImageSources(stripped, hrefToId, filename);
+      html = sanitizeChapterHtml(rewritten);
+    } catch (error) {
+      console.error(`[extractChaptersForUpload] ${ref.id}:`, error);
+    }
+    chapters.push({
       filename,
-      metadata: epub.metadata || ({ title: filename } as Metadata),
-    };
-  } catch (error) {
-    const m = error instanceof Error ? error.message : String(error);
-    console.error(`[getEpubSummary] ${filename}: ${m}`);
-    return null;
+      chapterId: ref.id,
+      idx: chapters.length,
+      title: ref.title,
+      html,
+    });
   }
+  return chapters;
+}
+
+export async function extractAssetsForUpload(
+  epub: EPub,
+  filename: string,
+): Promise<DbAsset[]> {
+  const assets: DbAsset[] = [];
+  for (const id of Object.keys(epub.manifest)) {
+    const item = epub.manifest[id];
+    const media =
+      (item as { mediaType?: string; "media-type"?: string }).mediaType ??
+      (item as { mediaType?: string; "media-type"?: string })["media-type"];
+    if (typeof media !== "string" || !media.startsWith("image/")) continue;
+    try {
+      const { data, mimeType } = await epub.getImage(id);
+      assets.push({
+        filename,
+        assetId: id,
+        mime: mimeType || media,
+        bytes: data,
+      });
+    } catch (error) {
+      console.error(`[extractAssetsForUpload] ${id}:`, error);
+    }
+  }
+  return assets;
+}
+
+export function readEpubMetadata(epub: EPub): {
+  title: string | null;
+  author: string | null;
+} {
+  const md = epub.metadata || ({} as Metadata);
+  const title = typeof md.title === "string" && md.title.trim() ? md.title : null;
+  const creator =
+    typeof md.creator === "string" && md.creator.trim() ? md.creator : null;
+  return { title, author: creator };
+}
+
+// ─── Whole-book JSON for chat context (DB-backed) ──────────────────────────
+const MAX_CHARS_PER_CHAPTER_JSON = 5000;
+
+export async function loadBookJsonFromDb(
+  filename: string,
+): Promise<BookJsonData> {
+  const book = await getBook(filename);
+  if (!book) {
+    throw new Error("Book not found.");
+  }
+  const dbChapters = await listChapters(filename);
+  const metadata = {
+    title: book.title || filename,
+    creator: book.author || "",
+  } as Metadata;
+  const chapters: BookChapter[] = dbChapters.map((c) => {
+    let plainText = c.html
+      .replace(/<[^>]*>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    let truncated = false;
+    if (plainText.length > MAX_CHARS_PER_CHAPTER_JSON) {
+      plainText =
+        plainText.substring(0, MAX_CHARS_PER_CHAPTER_JSON) + "... (truncated)";
+      truncated = true;
+    }
+    return {
+      id: c.chapterId,
+      title: c.title || `Chapter ${c.idx + 1}`,
+      content: plainText,
+      truncated,
+    };
+  });
+  return { metadata, chapters };
 }
