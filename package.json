@@ -2,26 +2,45 @@
   "name": "reader",
   "version": "1.0.0",
   "description": "EPUB Reader with AI Features",
-  "main": "server/app.js",
+  "main": "dist/app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server/app.js",
-    "dev": "nodemon server/app.js"
+    "start": "node dist/app.js",
+    "dev": "tsx watch server/app.ts",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write \"server/**/*.{ts,tsx,json}\" \"client/src/**/*.{ts,tsx,css,json}\" \"*.{json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"server/**/*.{ts,tsx,json}\" \"client/src/**/*.{ts,tsx,css,json}\" \"*.{json,md,yml,yaml}\"",
+    "lint": "eslint \"server/**/*.ts\" \"client/src/**/*.{ts,tsx}\"",
+    "lint:fix": "eslint --fix \"server/**/*.ts\" \"client/src/**/*.{ts,tsx}\""
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.95.0",
     "axios": "^1.7.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
-    "epub": "^1.2.1",
+    "epub": "^2.1.1",
     "express": "^4.19.2",
     "multer": "^1.4.5-lts.1",
     "openai": "^4.52.7"
   },
   "devDependencies": {
-    "nodemon": "^3.1.4"
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.1.0",
+    "@types/node": "^25.6.0",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "eslint": "^8.57.1",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "nodemon": "^3.1.4",
+    "prettier": "^3.8.3",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3"
   }
 }

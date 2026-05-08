@@ -1,0 +1,13 @@
+node_modules
+dist
+build
+client/build
+public
+uploads
+samples
+package-lock.json
+client/package-lock.json
+.env
+.env.*
+design_handoff_readr
+*.config.js
