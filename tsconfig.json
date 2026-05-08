@@ -6,7 +6,7 @@
     "ignoreDeprecations": "6.0",
     "lib": ["ES2022"],
     "outDir": "./dist",
-    "rootDir": "./server",
+    "rootDir": "./",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -17,6 +17,6 @@
     "noUncheckedIndexedAccess": false,
     "typeRoots": ["./node_modules/@types"]
   },
-  "include": ["server/**/*"],
+  "include": ["server/**/*", "shared/**/*"],
   "exclude": ["node_modules", "client", "dist", "uploads"]
 }

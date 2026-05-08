@@ -16,6 +16,58 @@ Strict rules:
 - Do not speculate about endings, twists, or character fates beyond the provided text.
 - Otherwise, be a thoughtful, concise companion: discuss what's actually on the page, reference chapter titles or IDs where helpful, and engage with the user's interpretation.`;
 
+async function* iterateClaudeStream(
+  bookContextString: string,
+  truncationNote: string,
+  selectedText: string | undefined,
+  query: string,
+): AsyncIterable<string> {
+  const stream = anthropic.messages.stream({
+    model: "claude-sonnet-4-6",
+    max_tokens: 4096,
+    thinking: { type: "disabled" },
+    system: SPOILER_SAFE_SYSTEM,
+    messages: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: `Book read so far (JSON):\n\`\`\`json\n${bookContextString}\n\`\`\`${truncationNote}`,
+            cache_control: { type: "ephemeral" },
+          },
+          {
+            type: "text",
+            text: selectedText
+              ? `Selected snippet from the current chapter:\n\`\`\`\n${selectedText}\n\`\`\``
+              : "No specific snippet selected.",
+          },
+          {
+            type: "text",
+            text: `Question: ${query}`,
+          },
+        ],
+      },
+    ],
+  });
+
+  for await (const event of stream) {
+    if (
+      event.type === "content_block_delta" &&
+      event.delta.type === "text_delta"
+    ) {
+      yield event.delta.text;
+    }
+  }
+
+  // Read the final message for usage logging.
+  const final = await stream.finalMessage();
+  const usage = final.usage;
+  console.log(
+    `[claudeService.stream] usage — input: ${usage.input_tokens}, cache_read: ${usage.cache_read_input_tokens}, cache_create: ${usage.cache_creation_input_tokens}, output: ${usage.output_tokens}`,
+  );
+}
+
 class ClaudeService {
   async getChatResponse(
     bookJsonData: BookJsonData,
@@ -113,6 +165,37 @@ class ClaudeService {
       }
       throw new Error(errorMessage);
     }
+  }
+
+  async *getChatResponseStream(
+    bookJsonData: BookJsonData,
+    selectedText: string | undefined,
+    query: string,
+  ): AsyncIterable<string> {
+    const chapterCount = bookJsonData.chapters?.length || 0;
+    console.log(
+      `[claudeService.stream] Chapters in context: ${chapterCount}; query: "${query}"`,
+    );
+
+    let bookContextString: string;
+    let truncationNote = "";
+    try {
+      bookContextString = JSON.stringify(bookJsonData);
+      if (bookContextString.length > MAX_JSON_CONTEXT_CHARS) {
+        bookContextString = bookContextString.substring(0, MAX_JSON_CONTEXT_CHARS);
+        truncationNote = " (Note: book context was truncated due to length.)";
+      }
+    } catch (err) {
+      console.error("[claudeService.stream] Failed to stringify book JSON:", err);
+      throw new Error("Failed to prepare book data for AI.");
+    }
+
+    yield* iterateClaudeStream(
+      bookContextString,
+      truncationNote,
+      selectedText,
+      query,
+    );
   }
 }
 

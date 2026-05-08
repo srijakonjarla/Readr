@@ -1,44 +1,18 @@
-export interface BookMetadata {
-  title?: string;
-  creator?: string;
-  publisher?: string;
-  language?: string;
-  date?: string;
-  description?: string;
-}
-
-export interface Book {
-  filename: string;
-  metadata?: BookMetadata;
-}
-
-export interface TocItem {
-  id: string;
-  href?: string;
-  title: string;
-}
-
-export interface BookInfo {
-  filename: string;
-  metadata?: BookMetadata;
-  toc: TocItem[];
-}
-
-export type Provider = "openai" | "claude";
+// Client types — re-exports the shared API contract from shared/api.ts plus
+// client-only state shapes (Highlight, Thread, ChatMessage, ActiveSection).
+export type {
+  BookMetadata,
+  Book,
+  TocItem,
+  BookInfo,
+  BookChapter,
+  BookJsonData,
+  Provider,
+  ChatRequest,
+  ChatResponse,
+} from "./shared/api";
 
 export type ActiveSection = "upload" | "library" | "preview" | "reader";
-
-export interface ChatRequest {
-  query: string;
-  context?: string;
-  filename: string;
-  currentChapterIndex?: number;
-  provider: Provider;
-}
-
-export interface ChatResponse {
-  response: string;
-}
 
 export type HighlightKind = "highlight" | "thread";
 

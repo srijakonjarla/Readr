@@ -3,6 +3,7 @@ import fsSync from "fs";
 import path from "path";
 import { EPub, type ManifestItem, type Metadata, type TocElement } from "epub";
 import type { Request, Response } from "express";
+import DOMPurify from "isomorphic-dompurify";
 import openaiService from "../services/openaiService";
 import claudeService from "../services/claudeService";
 import type { BookChapter, BookJsonData } from "../services/types";
@@ -38,7 +39,60 @@ const getChapterTitle = (
     : `Chapter ${index + 1}`;
 };
 
-async function loadEpub(filePath: string, timeoutMs = 15000): Promise<EPub> {
+// Build lookup maps from epub.toc → title, keyed by id and href (sans fragment).
+// Used to enrich flow-derived chapter lists with the real human titles.
+function buildTocTitleMaps(epub: EPub): {
+  byId: Record<string, string>;
+  byHref: Record<string, string>;
+} {
+  const byId: Record<string, string> = {};
+  const byHref: Record<string, string> = {};
+  if (!epub.toc) return { byId, byHref };
+  for (const t of epub.toc) {
+    const title = (t as Record<string, unknown>).title;
+    if (typeof title !== "string" || title.trim() === "") continue;
+    if (typeof t.id === "string") byId[t.id] = title;
+    if (typeof t.href === "string") {
+      const base = t.href.split("#")[0];
+      byHref[base] = title;
+      const fname = base.split("/").pop();
+      if (fname) byHref[fname] = title;
+    }
+  }
+  return { byId, byHref };
+}
+
+function resolveChapterTitle(
+  item: ManifestItem | TocElement,
+  index: number,
+  tocMaps: { byId: Record<string, string>; byHref: Record<string, string> },
+): string {
+  if (typeof item.id === "string" && tocMaps.byId[item.id]) {
+    return tocMaps.byId[item.id];
+  }
+  const href = typeof item.href === "string" ? item.href.split("#")[0] : "";
+  if (href && tocMaps.byHref[href]) return tocMaps.byHref[href];
+  const fname = href.split("/").pop();
+  if (fname && tocMaps.byHref[fname]) return tocMaps.byHref[fname];
+  return getChapterTitle(item, index);
+}
+
+// ─── EPUB parse cache (LRU on insertion order) ───────────────────────────────
+// Parsing reads the entire EPUB zip from disk and walks the manifest, which is
+// expensive to do on every chapter / asset / chat call. Cache the parsed EPub
+// keyed by file path; invalidate when the underlying file changes (mtime) and
+// evict the least-recently-used entry once we hit the cap.
+const EPUB_CACHE_MAX = 5;
+interface EpubCacheEntry {
+  epub: EPub;
+  mtimeMs: number;
+}
+const epubCache = new Map<string, EpubCacheEntry>();
+
+async function parseEpubFresh(
+  filePath: string,
+  timeoutMs: number,
+): Promise<EPub> {
   const epub = new EPub(filePath);
   await Promise.race([
     epub.parse(),
@@ -49,6 +103,26 @@ async function loadEpub(filePath: string, timeoutMs = 15000): Promise<EPub> {
       ),
     ),
   ]);
+  return epub;
+}
+
+async function loadEpub(filePath: string, timeoutMs = 15000): Promise<EPub> {
+  const stat = await fs.stat(filePath);
+  const cached = epubCache.get(filePath);
+  if (cached && cached.mtimeMs === stat.mtimeMs) {
+    // LRU touch: re-insert to move to the end
+    epubCache.delete(filePath);
+    epubCache.set(filePath, cached);
+    return cached.epub;
+  }
+  const epub = await parseEpubFresh(filePath, timeoutMs);
+  epubCache.set(filePath, { epub, mtimeMs: stat.mtimeMs });
+  // Evict oldest if over cap
+  while (epubCache.size > EPUB_CACHE_MAX) {
+    const oldestKey = epubCache.keys().next().value;
+    if (oldestKey === undefined) break;
+    epubCache.delete(oldestKey);
+  }
   return epub;
 }
 
@@ -106,6 +180,35 @@ function rewriteImageSources(
   );
 }
 
+// Sanitize chapter HTML before sending it to the client. Strip script tags,
+// inline event handlers, and dangerous attrs. Allow our rewritten /api/epub
+// asset URLs through; deny external network hops in <img>/<a> by stripping
+// the protocol — the client's anchor interceptor handles relative paths.
+function sanitizeChapterHtml(html: string): string {
+  return DOMPurify.sanitize(html, {
+    USE_PROFILES: { html: true },
+    FORBID_TAGS: ["script", "iframe", "object", "embed", "noscript", "form"],
+    FORBID_ATTR: [
+      "onerror",
+      "onload",
+      "onclick",
+      "onmouseover",
+      "onfocus",
+      "onblur",
+      "onsubmit",
+      "onkeydown",
+      "onkeypress",
+      "onkeyup",
+      "onchange",
+      "onmousedown",
+      "onmouseup",
+      "ondblclick",
+      "oncontextmenu",
+    ],
+    ALLOW_DATA_ATTR: false,
+  });
+}
+
 export const uploadFile = async (
   req: Request,
   res: Response,
@@ -158,10 +261,11 @@ export const getFile = async (
       console.log(
         `[getFile] Using ${useFlow ? "epub.flow" : "epub.toc"} for TOC mapping.`,
       );
+      const tocMaps = buildTocTitleMaps(epub);
       toc = chapterSource.map((item, index) => ({
         id: item.id,
         href: item.href,
-        title: getChapterTitle(item, index),
+        title: resolveChapterTitle(item, index, tocMaps),
       }));
     } else {
       console.warn(
@@ -203,7 +307,8 @@ export const getEpubChapter = async (
     const rawText = await epub.getChapter(chapterId);
     const stripped = stripEpubStyles(rawText || "");
     const hrefToId = buildHrefToId(epub);
-    const text = rewriteImageSources(stripped, hrefToId, filename);
+    const rewritten = rewriteImageSources(stripped, hrefToId, filename);
+    const text = sanitizeChapterHtml(rewritten);
     console.log(
       `[getEpubChapter] Retrieved chapter ID ${chapterId}. Content length: ${text ? text.length : 0}`,
     );
@@ -363,9 +468,10 @@ const loadBookJsonStructure = async (
     return bookJson;
   }
 
+  const tocMaps = buildTocTitleMaps(epub);
   const chapterPromises: Promise<BookChapter>[] = chapterList.map(
     async (chapterRef, index) => {
-      const fallbackTitle = getChapterTitle(chapterRef, index);
+      const fallbackTitle = resolveChapterTitle(chapterRef, index, tocMaps);
       try {
         const text = await epub.getChapter(chapterRef.id);
         let plainText = text
@@ -413,26 +519,21 @@ const loadBookJsonStructure = async (
 export const handleChatQuery = async (
   req: Request<unknown, unknown, ChatRequestBody>,
   res: Response,
-): Promise<Response> => {
+): Promise<void> => {
   const { query, context, filename, currentChapterIndex, provider } = req.body;
-  console.log(`[handleChatQuery] Received query: "${query}"`);
+  console.log(`[handleChatQuery] query="${query}" file=${filename}`);
   console.log(
-    `[handleChatQuery] Received selected text length: ${context ? context.length : 0}`,
-  );
-  console.log(`[handleChatQuery] Received filename: ${filename}`);
-  console.log(
-    `[handleChatQuery] currentChapterIndex: ${currentChapterIndex}, provider: ${provider}`,
+    `[handleChatQuery] selectedTextLen=${context ? context.length : 0} chapterIdx=${currentChapterIndex} provider=${provider}`,
   );
 
-  if (!query) return res.status(400).json({ error: "No query provided" });
-  if (!filename) return res.status(400).json({ error: "No filename provided" });
+  if (!query || !filename) {
+    res.status(400).json({ error: "Missing query or filename" });
+    return;
+  }
 
   try {
     const filePath = path.join(UPLOADS_DIR, filename);
     const bookJsonData = await loadBookJsonStructure(filePath);
-    console.log(
-      `[handleChatQuery] Loaded book JSON. Total chapters: ${bookJsonData.chapters.length}`,
-    );
 
     const totalChapters = bookJsonData.chapters.length;
     const cutoff =
@@ -446,24 +547,41 @@ export const handleChatQuery = async (
       chapters: bookJsonData.chapters.slice(0, cutoff),
     };
     console.log(
-      `[handleChatQuery] Trimmed to ${trimmedBookJson.chapters.length}/${totalChapters} chapters (cutoff index ${cutoff - 1}).`,
+      `[handleChatQuery] Trimmed to ${trimmedBookJson.chapters.length}/${totalChapters} chapters.`,
     );
 
     const service = provider === "claude" ? claudeService : openaiService;
-    const aiResponse = await service.getChatResponse(
+
+    res.status(200);
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders?.();
+
+    let totalChars = 0;
+    for await (const chunk of service.getChatResponseStream(
       trimmedBookJson,
       context,
       query,
-    );
-
+    )) {
+      if (res.writableEnded) break;
+      res.write(chunk);
+      totalChars += chunk.length;
+    }
+    res.end();
     console.log(
-      `[handleChatQuery] Response from ${provider === "claude" ? "Claude" : "OpenAI"} received.`,
+      `[handleChatQuery] Streamed ${totalChars} chars from ${provider === "claude" ? "Claude" : "OpenAI"}.`,
     );
-    return res.status(200).json(aiResponse);
   } catch (error) {
-    console.error("[handleChatQuery] Error processing chat query:", error);
+    console.error("[handleChatQuery] Error:", error);
     const errorMessage =
       error instanceof Error ? error.message : "Failed to process chat query";
-    return res.status(500).json({ error: errorMessage });
+    if (!res.headersSent) {
+      res.status(500).json({ error: errorMessage });
+    } else {
+      // Already streaming — append a marker the client can detect.
+      res.write(`\n\n[Error: ${errorMessage}]`);
+      res.end();
+    }
   }
 };

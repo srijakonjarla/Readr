@@ -12,6 +12,15 @@ import type {
   Thread,
   ChatMessage,
 } from "./types";
+import {
+  fetchBookState,
+  persistClearMessages,
+  persistHighlight,
+  persistMessage,
+  persistRemoveHighlight,
+  persistRemoveLastMessage,
+  persistThread,
+} from "./services/persistence";
 import "./App.css";
 
 type Theme = "cream" | "sepia" | "dark";
@@ -82,24 +91,45 @@ function App(): React.ReactElement {
   const handleOpenBook = (book?: Book): void => {
     if (book) setCurrentBook(book);
     setActiveSection("reader");
-    // Ensure a 'main' thread exists for this book
     const targetBook = book ?? currentBook;
     if (targetBook) {
-      setThreads((prev) => {
-        if (prev[targetBook.filename]?.length) return prev;
-        return {
-          ...prev,
-          [targetBook.filename]: [
-            {
+      // Load persisted highlights + threads for this book.
+      void fetchBookState(targetBook.filename)
+        .then((state) => {
+          setHighlights((prev) => ({
+            ...prev,
+            [targetBook.filename]: state.highlights,
+          }));
+          // Always ensure a 'main' thread exists at the front.
+          const hasMain = state.threads.some((t) => t.id === "main");
+          const mainThread: Thread = {
+            id: "main",
+            title: "General",
+            anchor: null,
+            chapterIndex: null,
+            messages: [],
+          };
+          const merged = hasMain ? state.threads : [mainThread, ...state.threads];
+          if (!hasMain) {
+            persistThread(targetBook.filename, mainThread);
+          }
+          setThreads((prev) => ({ ...prev, [targetBook.filename]: merged }));
+        })
+        .catch((err) => {
+          console.warn("Failed to load persisted state:", err);
+          setThreads((prev) => {
+            if (prev[targetBook.filename]?.length) return prev;
+            const mainThread: Thread = {
               id: "main",
               title: "General",
               anchor: null,
               chapterIndex: null,
               messages: [],
-            },
-          ],
-        };
-      });
+            };
+            persistThread(targetBook.filename, mainThread);
+            return { ...prev, [targetBook.filename]: [mainThread] };
+          });
+        });
     }
     setActiveThreadId("main");
   };
@@ -118,6 +148,23 @@ function App(): React.ReactElement {
       ...prev,
       [currentBook.filename]: [...(prev[currentBook.filename] ?? []), h],
     }));
+    persistHighlight(currentBook.filename, h);
+  };
+
+  const removeHighlight = (highlightId: string): void => {
+    if (!currentBook) return;
+    setHighlights((prev) => ({
+      ...prev,
+      [currentBook.filename]: (prev[currentBook.filename] ?? []).filter(
+        (h) => h.id !== highlightId,
+      ),
+    }));
+    persistRemoveHighlight(highlightId);
+  };
+
+  const focusThread = (highlightId: string): void => {
+    setActiveThreadId(highlightId);
+    setChatOpen(true);
   };
 
   const startThreadFromSelection = (
@@ -134,17 +181,20 @@ function App(): React.ReactElement {
       chapterIndex: h.chapterIndex,
       messages: [],
     };
+    const promotedHighlight: Highlight = { ...h, kind: "thread" };
     setHighlights((prev) => ({
       ...prev,
       [currentBook.filename]: [
         ...(prev[currentBook.filename] ?? []),
-        { ...h, kind: "thread" },
+        promotedHighlight,
       ],
     }));
     setThreads((prev) => ({
       ...prev,
       [currentBook.filename]: [...(prev[currentBook.filename] ?? []), thread],
     }));
+    persistHighlight(currentBook.filename, promotedHighlight);
+    persistThread(currentBook.filename, thread);
     setActiveThreadId(h.id);
     setChatOpen(true);
     if (suggestedPrompt) setPendingPrompt(suggestedPrompt);
@@ -162,6 +212,7 @@ function App(): React.ReactElement {
         ),
       };
     });
+    persistClearMessages(threadId);
   };
 
   const removeLastMessage = (threadId: string): void => {
@@ -171,12 +222,11 @@ function App(): React.ReactElement {
       return {
         ...prev,
         [currentBook.filename]: existing.map((t) =>
-          t.id === threadId
-            ? { ...t, messages: t.messages.slice(0, -1) }
-            : t,
+          t.id === threadId ? { ...t, messages: t.messages.slice(0, -1) } : t,
         ),
       };
     });
+    persistRemoveLastMessage(threadId);
   };
 
   const appendMessage = (threadId: string, msg: ChatMessage): void => {
@@ -190,6 +240,46 @@ function App(): React.ReactElement {
         ),
       };
     });
+    persistMessage(threadId, msg);
+  };
+
+  // Streaming helpers — used while a token-by-token response arrives.
+  // appendStreamingMessage adds an empty assistant placeholder; updateStreamingText
+  // overwrites the last message's text in-place (UI only); commitStreamingMessage
+  // persists the final text once streaming completes.
+  const appendStreamingMessage = (threadId: string, msg: ChatMessage): void => {
+    if (!currentBook) return;
+    setThreads((prev) => {
+      const existing = prev[currentBook.filename] ?? [];
+      return {
+        ...prev,
+        [currentBook.filename]: existing.map((t) =>
+          t.id === threadId ? { ...t, messages: [...t.messages, msg] } : t,
+        ),
+      };
+    });
+  };
+
+  const updateStreamingText = (threadId: string, fullText: string): void => {
+    if (!currentBook) return;
+    setThreads((prev) => {
+      const existing = prev[currentBook.filename] ?? [];
+      return {
+        ...prev,
+        [currentBook.filename]: existing.map((t) => {
+          if (t.id !== threadId) return t;
+          if (t.messages.length === 0) return t;
+          const next = [...t.messages];
+          const last = next[next.length - 1];
+          next[next.length - 1] = { ...last, text: fullText };
+          return { ...t, messages: next };
+        }),
+      };
+    });
+  };
+
+  const commitStreamingMessage = (threadId: string, msg: ChatMessage): void => {
+    persistMessage(threadId, msg);
   };
 
   const bookHighlights = currentBook
@@ -296,7 +386,9 @@ function App(): React.ReactElement {
             onBackToLibrary={handleBackToLibrary}
             highlights={bookHighlights}
             onAddHighlight={addHighlight}
+            onRemoveHighlight={removeHighlight}
             onStartThread={startThreadFromSelection}
+            onFocusThread={focusThread}
             onOpenChat={() => setChatOpen(true)}
             chatOpen={chatOpen}
             onChapterChange={setReaderChapterIndex}
@@ -313,6 +405,9 @@ function App(): React.ReactElement {
           activeThreadId={activeThreadId}
           onSwitchThread={setActiveThreadId}
           onAppendMessage={appendMessage}
+          onAppendStreamingMessage={appendStreamingMessage}
+          onUpdateStreamingText={updateStreamingText}
+          onCommitStreamingMessage={commitStreamingMessage}
           onClearThread={clearThread}
           onRemoveLastMessage={removeLastMessage}
           pendingPrompt={pendingPrompt}

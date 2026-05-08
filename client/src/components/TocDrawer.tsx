@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { X, Sparkles, MessageSquare } from "lucide-react";
 import type { TocItem } from "../types";
 
@@ -19,6 +19,12 @@ function TocDrawer({
   onSelect,
   onClose,
 }: TocDrawerProps) {
+  const activeRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({ block: "center", behavior: "auto" });
+  }, []);
+
   return (
     <>
       <div
@@ -79,6 +85,7 @@ function TocDrawer({
             return (
               <button
                 key={c.id}
+                ref={active ? activeRef : undefined}
                 onClick={() => onSelect(i)}
                 style={{
                   all: "unset",
