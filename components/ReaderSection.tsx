@@ -20,6 +20,7 @@ import { useChapterLoader } from "../hooks/useChapterLoader";
 import { useScrollProgress } from "../hooks/useScrollProgress";
 import { useTextSelection } from "../hooks/useTextSelection";
 import { useHighlightPainter } from "../hooks/useHighlightPainter";
+import { useReaderActions } from "../hooks/useReaderActions";
 
 interface ReaderSectionProps {
   book: Book;
@@ -107,77 +108,19 @@ function ReaderSection({
     chapterContent,
   );
 
-  // Internal links inside the rendered EPUB chapter HTML — match the link's
-  // basename against TOC entries' href to resolve cross-chapter navigation.
-  const handleBodyClick = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>): void => {
-      const target = e.target as HTMLElement;
-      const anchor = target.closest("a");
-      if (!anchor || !bodyRef.current?.contains(anchor)) return;
-      const href = anchor.getAttribute("href");
-      if (!href) return;
-      if (/^(https?:|mailto:|tel:)/i.test(href)) return;
-      e.preventDefault();
-      if (href.startsWith("#")) {
-        const id = href.slice(1);
-        const el = bodyRef.current.querySelector(`#${CSS.escape(id)}`);
-        el?.scrollIntoView({ behavior: "smooth", block: "start" });
-        return;
-      }
-      const [pathPart] = href.split("#");
-      const linkBase = (pathPart.split("/").pop() ?? "").toLowerCase();
-      if (!linkBase) return;
-      const idx = toc.findIndex((t) => {
-        const tocHref = (t.href ?? "").split("/").pop()?.toLowerCase() ?? "";
-        return tocHref === linkBase;
-      });
-      if (idx >= 0) {
-        setCurrentChapterIndex(idx);
-      } else {
-        console.warn(
-          "[ReaderSection] internal EPUB link did not match any TOC item:",
-          href,
-        );
-      }
-    },
-    [toc, setCurrentChapterIndex],
-  );
-
-  const handleAsk = (): void => {
-    if (!selPopover || !currentChapter) return;
-    const h: Highlight = {
-      id: `h-${Date.now()}`,
-      kind: "thread",
-      chapterId: currentChapter.id,
-      chapterIndex: currentChapterIndex,
-      text: selPopover.text,
-      threadCount: 1,
-    };
-    onStartThread(h, chapterTitle, "What does this passage mean?");
-    dismissSelection();
-  };
-
-  const handleHighlight = (): void => {
-    if (!selPopover || !currentChapter) return;
-    const h: Highlight = {
-      id: `h-${Date.now()}`,
-      kind: "highlight",
-      chapterId: currentChapter.id,
-      chapterIndex: currentChapterIndex,
-      text: selPopover.text,
-    };
-    onAddHighlight(h);
-    dismissSelection();
-  };
-
-  const navPrev = (): void => {
-    if (currentChapterIndex > 0)
-      setCurrentChapterIndex(currentChapterIndex - 1);
-  };
-  const navNext = (): void => {
-    if (currentChapterIndex < toc.length - 1)
-      setCurrentChapterIndex(currentChapterIndex + 1);
-  };
+  const { handleBodyClick, handleAsk, handleHighlight, navPrev, navNext } =
+    useReaderActions({
+      bodyRef,
+      toc,
+      currentChapterIndex,
+      setCurrentChapterIndex,
+      currentChapter,
+      chapterTitle,
+      selPopover,
+      dismissSelection,
+      onAddHighlight,
+      onStartThread,
+    });
 
   if (loading) {
     return (

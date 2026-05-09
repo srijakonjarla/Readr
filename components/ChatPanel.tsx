@@ -1,18 +1,12 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import {
-  X,
-  Sparkles,
-  Send,
-  Quote,
-  MessageSquare,
-  RotateCcw,
-  Trash2,
-} from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import type { Book, ChatMessage, Provider, Thread } from "../types";
+import { X, Sparkles, Send, Trash2 } from "lucide-react";
+import type { Book, ChatMessage, Thread } from "../types";
+import { groupAsks } from "./chat/types";
+import { Greeting } from "./chat/Greeting";
+import { AskCard, PendingAsk } from "./chat/AskCard";
+import { useChatStream } from "./chat/useChatStream";
 
 interface ChatPanelProps {
   open: boolean;
@@ -34,31 +28,6 @@ interface ChatPanelProps {
   currentChapterIndex: number;
 }
 
-interface Ask {
-  question: ChatMessage;
-  answer: ChatMessage | null;
-}
-
-const groupAsks = (messages: ChatMessage[]): Ask[] => {
-  const result: Ask[] = [];
-  for (let i = 0; i < messages.length; i++) {
-    const msg = messages[i];
-    if (msg.role === "user") {
-      const next = messages[i + 1];
-      const answer = next?.role === "assistant" ? next : null;
-      result.push({ question: msg, answer });
-      if (answer) i++;
-    } else {
-      // Orphan assistant message (shouldn't happen but be defensive)
-      result.push({
-        question: { role: "user", text: "(no question)" },
-        answer: msg,
-      });
-    }
-  }
-  return result;
-};
-
 function ChatPanel({
   open,
   onClose,
@@ -78,8 +47,6 @@ function ChatPanel({
   currentChapterIndex,
 }: ChatPanelProps) {
   const [input, setInput] = useState<string>("");
-  const [provider, setProvider] = useState<Provider>("openai");
-  const [sending, setSending] = useState<boolean>(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const activeThread =
@@ -89,106 +56,28 @@ function ChatPanel({
     [activeThread],
   );
 
+  const { provider, setProvider, sending, submit, regenerateLast } =
+    useChatStream({
+      book,
+      activeThread,
+      currentChapterIndex,
+      onAppendMessage,
+      onAppendStreamingMessage,
+      onUpdateStreamingText,
+      onCommitStreamingMessage,
+      onRemoveLastMessage,
+    });
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [activeThread, sending, open]);
 
-  const submit = async (
-    textArg?: string,
-    options?: { skipUserAppend?: boolean },
-  ): Promise<void> => {
-    const text = (textArg ?? input).trim();
-    if (!text || !activeThread) return;
+  const handleSend = (text?: string): void => {
+    const value = text ?? input;
     setInput("");
-    if (!options?.skipUserAppend) {
-      onAppendMessage(activeThread.id, { role: "user", text });
-    }
-    setSending(true);
-
-    // Spoiler cutoff: anchored thread captures its chapter at creation
-    // time; for the General thread, fall back to the reader's current
-    // chapter so we don't accidentally send the rest of the book.
-    const cutoffIdx = activeThread.chapterIndex ?? currentChapterIndex;
-    const body = {
-      query: text,
-      context: activeThread.anchor?.text ?? "",
-      filename: book.filename,
-      currentChapterIndex: cutoffIdx >= 0 ? cutoffIdx : undefined,
-      provider,
-    };
-
-    // Add an empty assistant placeholder; we'll fill it as tokens arrive.
-    const anchored = !!activeThread.anchor;
-    onAppendStreamingMessage(activeThread.id, {
-      role: "assistant",
-      text: "",
-      anchor: anchored,
-    });
-
-    let accumulated = "";
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok || !res.body) {
-        const errPayload = await res.json().catch(() => ({}));
-        throw new Error(
-          (errPayload as { error?: string }).error ?? `HTTP ${res.status}`,
-        );
-      }
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        if (value) {
-          accumulated += decoder.decode(value, { stream: true });
-          onUpdateStreamingText(activeThread.id, accumulated);
-        }
-      }
-      // Flush any remaining bytes from the decoder.
-      const tail = decoder.decode();
-      if (tail) {
-        accumulated += tail;
-        onUpdateStreamingText(activeThread.id, accumulated);
-      }
-
-      onCommitStreamingMessage(activeThread.id, {
-        role: "assistant",
-        text: accumulated,
-        anchor: anchored,
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
-      const errorText = accumulated
-        ? `${accumulated}\n\n[Error: ${message}]`
-        : `Error: ${message}`;
-      onUpdateStreamingText(activeThread.id, errorText);
-      onCommitStreamingMessage(activeThread.id, {
-        role: "assistant",
-        text: errorText,
-        anchor: anchored,
-      });
-    } finally {
-      setSending(false);
-    }
-  };
-
-  // Regenerate the last answer: drop the existing assistant message and
-  // re-ask the same question (without re-appending the user message).
-  const regenerateLast = (): void => {
-    if (!activeThread || sending) return;
-    const last = activeThread.messages[activeThread.messages.length - 1];
-    const prev = activeThread.messages[activeThread.messages.length - 2];
-    if (!last || last.role !== "assistant" || !prev || prev.role !== "user") {
-      return;
-    }
-    onRemoveLastMessage(activeThread.id);
-    void submit(prev.text, { skipUserAppend: true });
+    void submit(value);
   };
 
   // Auto-fire pending prompt (e.g., from "Ask" selection action)
@@ -202,6 +91,8 @@ function ChatPanel({
   }, [open, pendingPrompt, activeThreadId]);
 
   if (!open) return null;
+
+  const canClear = !!activeThread && !sending && asks.length > 0;
 
   return (
     <aside className="fixed bottom-0 right-0 top-0 z-40 flex w-lg flex-col border-l border-rule-2 bg-paper shadow-[-6px_0_28px_-18px_rgba(31,27,22,.18)]">
@@ -232,40 +123,34 @@ function ChatPanel({
         </button>
       </div>
 
-      {/* Toolbar (Clear) — always visible so it persists across both contexts;
-          disabled when there's nothing to clear or while a request is in flight. */}
+      {/* Toolbar (Clear) */}
       {activeThread && (
         <div className="flex items-center justify-end gap-2 border-b border-rule-2 px-5 py-1.5">
-          {(() => {
-            const canClear = !sending && asks.length > 0;
-            return (
-              <button
-                onClick={() => {
-                  if (!canClear) return;
-                  if (
-                    window.confirm(
-                      "Clear all asks in this context? Anchored selection (if any) will be kept.",
-                    )
-                  ) {
-                    onClearThread(activeThread.id);
-                  }
-                }}
-                disabled={!canClear}
-                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-kicker font-medium text-ink-3 btn-reset ${
-                  canClear
-                    ? "cursor-pointer opacity-100"
-                    : "cursor-not-allowed opacity-40"
-                }`}
-                title={
-                  asks.length === 0
-                    ? "Nothing to clear in this context"
-                    : "Clear all asks in this context"
-                }
-              >
-                <Trash2 size={12} /> Clear
-              </button>
-            );
-          })()}
+          <button
+            onClick={() => {
+              if (!canClear) return;
+              if (
+                window.confirm(
+                  "Clear all asks in this context? Anchored selection (if any) will be kept.",
+                )
+              ) {
+                onClearThread(activeThread.id);
+              }
+            }}
+            disabled={!canClear}
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-kicker font-medium text-ink-3 btn-reset ${
+              canClear
+                ? "cursor-pointer opacity-100"
+                : "cursor-not-allowed opacity-40"
+            }`}
+            title={
+              asks.length === 0
+                ? "Nothing to clear in this context"
+                : "Clear all asks in this context"
+            }
+          >
+            <Trash2 size={12} /> Clear
+          </button>
         </div>
       )}
 
@@ -371,7 +256,7 @@ function ChatPanel({
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                void submit();
+                handleSend();
               }
             }}
             rows={1}
@@ -379,7 +264,7 @@ function ChatPanel({
             className="max-h-35 flex-1 resize-none border-none bg-transparent py-1.5 font-serif text-prose leading-normal text-ink outline-hidden"
           />
           <button
-            onClick={() => void submit()}
+            onClick={() => handleSend()}
             disabled={!input.trim() || sending}
             className={`inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-meta font-semibold text-white shadow-[0_4px_10px_-4px_rgba(0,0,0,.18)] transition-[opacity,filter] duration-150 btn-reset ${
               input.trim() && !sending
@@ -397,115 +282,6 @@ function ChatPanel({
         </div>
       </div>
     </aside>
-  );
-}
-
-// ─── Sub-components ───────────────────────────────────────────────
-
-function Greeting({ onPick }: { onPick: (prompt: string) => void }) {
-  const opts: Array<{ icon: React.ReactNode; label: string }> = [
-    { icon: <Sparkles size={15} />, label: "Summarize what I have read" },
-    { icon: <Quote size={15} />, label: "Generate discussion questions" },
-    {
-      icon: <MessageSquare size={15} />,
-      label: "Explain the central idea simply",
-    },
-  ];
-  return (
-    <div className="pb-4 pt-2">
-      <h3 className="mb-1.5 font-serif text-2xl font-semibold leading-tight text-ink text-pretty">
-        Ask me one thing.
-      </h3>
-      <p className="mb-4.5 font-serif text-sm italic leading-normal text-ink-2">
-        I have only the chapters you&apos;ve read so far — and I treat every
-        question as a fresh ask.
-      </p>
-      <div className="flex flex-col gap-1.5">
-        {opts.map((o) => (
-          <button
-            key={o.label}
-            onClick={() => onPick(o.label)}
-            className="flex cursor-pointer items-center gap-3 rounded-md border border-rule-2 bg-bg-2 px-3.5 py-3 font-serif text-sm text-ink-2 btn-reset"
-          >
-            <span className="text-accent">{o.icon}</span> {o.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function AskCard({
-  ask,
-  pending,
-  onRegenerate,
-}: {
-  ask: Ask;
-  pending: boolean;
-  onRegenerate?: () => void;
-}) {
-  return (
-    <div className="card mb-3.5 overflow-hidden rounded-md p-0">
-      {/* Question */}
-      <div
-        className="border-b border-rule-2 px-3.5 pb-2 pt-2.5"
-        style={{
-          background: "color-mix(in oklab, var(--accent) 5%, transparent)",
-        }}
-      >
-        <div className="kicker mb-1 text-tiny text-accent">Ask</div>
-        <div className="font-serif text-prose font-semibold leading-[1.4] text-ink text-pretty">
-          {ask.question.text}
-        </div>
-      </div>
-      {/* Answer */}
-      <div className="px-3.5 pb-3.5 pt-3">
-        <div className="mb-1.5 flex items-center justify-between">
-          <div className="kicker text-tiny">Answer</div>
-          {onRegenerate && (
-            <button
-              onClick={onRegenerate}
-              className="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2 py-0.5 text-kicker font-medium text-ink-3 btn-reset"
-              title="Re-ask the same question"
-            >
-              <RotateCcw size={11} /> Regenerate
-            </button>
-          )}
-        </div>
-        {pending || !ask.answer ? (
-          <TypingDots />
-        ) : (
-          <div className="ask-answer">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {ask.answer.text}
-            </ReactMarkdown>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function PendingAsk({ text }: { text: string }) {
-  return (
-    <AskCard
-      ask={{ question: { role: "user", text: text || "…" }, answer: null }}
-      pending={true}
-    />
-  );
-}
-
-function TypingDots() {
-  return (
-    <div className="flex items-center gap-1 py-1 text-ink-3">
-      {[0, 0.2, 0.4].map((delay) => (
-        <span
-          key={delay}
-          className="inline-block h-1.5 w-1.5 animate-dot-pulse rounded-full bg-current"
-          style={{ animationDelay: `${delay}s` }}
-        />
-      ))}
-    </div>
   );
 }
 

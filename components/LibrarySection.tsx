@@ -1,11 +1,10 @@
 "use client";
 
 import React, { useRef, useState, useMemo } from "react";
-import { ArrowRight, BookOpen } from "lucide-react";
 import type { Book } from "../types";
-import MiniCover from "./MiniCover";
-import { bookGradient, bookHue, chipHueColor } from "../util/hue";
-import { FONT, headingStyle } from "../lib/styles";
+import { headingStyle } from "../lib/styles";
+import { HeroCard } from "./library/HeroCard";
+import { BookCard } from "./library/BookCard";
 
 interface LibrarySectionProps {
   books: Book[];
@@ -89,7 +88,7 @@ function LibrarySection({
 
   return (
     <section className="mx-auto max-w-page px-14 pb-32">
-      {/* Greeting block — no colored band, sits on the page background */}
+      {/* Greeting block */}
       <div className="mb-14">
         <div className="status-pill">
           <span className="status-dot animate-pulse2" />
@@ -112,81 +111,7 @@ function LibrarySection({
         </p>
       </div>
 
-      {/* Hero card */}
-      {heroBook && (
-        <div
-          className="card-hero mb-18 grid cursor-pointer grid-cols-[1fr_1.3fr]"
-          onClick={() => handleOpenHero(heroBook)}
-        >
-          {/* Left: gradient cover */}
-          <div
-            className="flex min-h-95 flex-col justify-between p-10"
-            style={{ background: bookGradient(bookHue(heroBook.filename)) }}
-          >
-            <span className="hero-badge self-start">
-              <span className="hero-badge-dot" />
-              Currently reading
-            </span>
-            <div>
-              <div
-                className="mb-3.5 text-kicker font-semibold uppercase tracking-[0.16em]"
-                style={{ color: chipHueColor(bookHue(heroBook.filename)) }}
-              >
-                Your shelf
-              </div>
-              <div
-                className="max-w-80 text-4xl font-semibold leading-[1.05] tracking-[-0.01em] text-white text-balance"
-                style={{ fontFamily: FONT.serif }}
-              >
-                {heroBook.metadata?.title || heroBook.filename}
-              </div>
-              {heroBook.metadata?.creator && (
-                <div className="mt-2.5 text-sm font-medium text-white/70">
-                  {heroBook.metadata.creator}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Right: meta + resume */}
-          <div className="flex flex-col px-11 py-10">
-            <div className="kicker mb-4.5">Continue reading</div>
-            <p
-              className="m-0 mb-7 max-w-115 text-lg italic leading-[1.55] text-ink-2 text-pretty"
-              style={{ fontFamily: FONT.serif }}
-            >
-              {heroBook.metadata?.description ||
-                `“A book on your shelf, waiting. Tap to step back in.”`}
-            </p>
-            <div className="flex-1" />
-            <div className="grid grid-cols-3 gap-6 border-t border-rule-2 pt-7">
-              <Stat
-                label="Author"
-                value={heroBook.metadata?.creator?.split(" ")[0] ?? "—"}
-              />
-              <Stat
-                label="Publisher"
-                value={heroBook.metadata?.publisher ?? "—"}
-              />
-              <Stat label="Format" value="EPUB" />
-            </div>
-            <div className="mt-7 flex items-center gap-3.5">
-              <div className="progress-track">
-                <div className="progress-fill" style={{ width: "0%" }} />
-              </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleOpenHero(heroBook);
-                }}
-                className="btn-ink"
-              >
-                Resume <ArrowRight size={15} strokeWidth={2.2} />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {heroBook && <HeroCard book={heroBook} onOpen={handleOpenHero} />}
 
       {/* Library list */}
       {books.length > 0 && (
@@ -214,37 +139,13 @@ function LibrarySection({
           </div>
 
           <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(360px,1fr))]">
-            {otherBooks.map((book) => {
-              const cardHue = bookHue(book.filename);
-              return (
-                <button
-                  key={book.filename}
-                  onClick={() => onBookSelect(book)}
-                  className="card book-card group flex w-full items-stretch gap-4.5 p-4.5 text-left transition-all hover:-translate-y-0.5"
-                >
-                  <MiniCover hue={cardHue} title={book.metadata?.title} />
-                  <div className="flex min-w-0 flex-1 flex-col">
-                    <div className="mb-1 truncate text-base font-semibold leading-[1.2] tracking-[-0.01em] text-ink">
-                      {book.metadata?.title || book.filename}
-                    </div>
-                    <div className="mb-3 text-meta text-ink-3">
-                      {book.metadata?.creator || "Unknown author"}
-                    </div>
-                    <div className="flex-1" />
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="inline-flex items-center gap-1.5 text-kicker font-semibold tracking-[0.02em] text-ink-3">
-                        <BookOpen size={12} /> EPUB
-                      </span>
-                      {book.metadata?.publisher && (
-                        <span className="meta-chip">
-                          {book.metadata.publisher}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
+            {otherBooks.map((book) => (
+              <BookCard
+                key={book.filename}
+                book={book}
+                onSelect={onBookSelect}
+              />
+            ))}
           </div>
         </div>
       )}
@@ -257,17 +158,6 @@ function LibrarySection({
         onChange={handleFileChange}
       />
     </section>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div className="kicker mb-1.5 tracking-[0.04em]">{label}</div>
-      <div className="truncate text-lg font-bold leading-[1.1] tracking-[-0.02em] text-ink">
-        {value}
-      </div>
-    </div>
   );
 }
 
