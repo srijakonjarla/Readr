@@ -75,7 +75,7 @@ function MetadataPreview({
       <div className="card-hero grid grid-cols-[1fr_1.3fr]">
         {/* Left: gradient cover */}
         <div
-          className="flex min-h-[380px] flex-col justify-end p-10"
+          className="flex min-h-95 flex-col justify-end p-10"
           style={{ background: bookGradient(hue) }}
         >
           <div
@@ -86,7 +86,7 @@ function MetadataPreview({
             {bookInfo.toc?.length === 1 ? "" : "s"}
           </div>
           <div
-            className="max-w-[320px] text-[36px] font-semibold leading-[1.05] tracking-[-0.01em] text-white [text-wrap:balance]"
+            className="max-w-80 text-4xl font-semibold leading-[1.05] tracking-[-0.01em] text-white text-balance"
             style={{ fontFamily: FONT.serif }}
           >
             {bookInfo.metadata?.title || "Untitled"}
@@ -103,7 +103,7 @@ function MetadataPreview({
           <div className="kicker">About this book</div>
           {bookInfo.metadata?.description ? (
             <div
-              className="reading-body text-[17px] leading-[1.6] text-ink-2"
+              className="reading-body text-h4 leading-[1.6] text-ink-2"
               dangerouslySetInnerHTML={{
                 __html: bookInfo.metadata.description,
               }}

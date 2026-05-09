@@ -204,9 +204,9 @@ function ChatPanel({
   if (!open) return null;
 
   return (
-    <aside className="fixed bottom-0 right-0 top-0 z-40 flex w-[420px] flex-col border-l border-rule-2 bg-paper shadow-[-6px_0_28px_-18px_rgba(31,27,22,.18)]">
+    <aside className="fixed bottom-0 right-0 top-0 z-40 flex w-lg flex-col border-l border-rule-2 bg-paper shadow-[-6px_0_28px_-18px_rgba(31,27,22,.18)]">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-rule-2 px-[22px] pb-3.5 pt-[18px]">
+      <div className="flex items-center justify-between border-b border-rule-2 px-5.5 pb-3.5 pt-4.5">
         <div className="flex items-center gap-2.5">
           <span
             className="flex h-7 w-7 items-center justify-center rounded-full text-accent"
@@ -251,7 +251,7 @@ function ChatPanel({
                   }
                 }}
                 disabled={!canClear}
-                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium text-ink-3 btn-reset ${
+                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-kicker font-medium text-ink-3 btn-reset ${
                   canClear
                     ? "cursor-pointer opacity-100"
                     : "cursor-not-allowed opacity-40"
@@ -270,7 +270,7 @@ function ChatPanel({
       )}
 
       {/* Provider toggle */}
-      <div className="flex items-center gap-2 border-b border-rule-2 px-5 py-2 text-[11px]">
+      <div className="flex items-center gap-2 border-b border-rule-2 px-5 py-2 text-kicker">
         <span className="mono-caption">Model</span>
         <button
           onClick={() => setProvider("openai")}
@@ -298,7 +298,7 @@ function ChatPanel({
             return (
               <span
                 key={t.id}
-                className="nav-chip inline-flex items-center gap-1 whitespace-nowrap py-1 pl-2.5 pr-1 text-[11px]"
+                className="nav-chip inline-flex items-center gap-1 whitespace-nowrap py-1 pl-2.5 pr-1 text-kicker"
                 aria-pressed={active}
               >
                 <button
@@ -333,17 +333,14 @@ function ChatPanel({
 
       {/* Anchor card */}
       {activeThread?.anchor && (
-        <div className="mx-[18px] mt-3.5 rounded-md border-l-2 border-accent bg-bg-2 px-3.5 py-3 font-serif text-[13px] italic leading-[1.5] text-ink-2">
+        <div className="mx-4.4 mt-3.5 rounded-md border-l-2 border-accent bg-bg-2 px-3.5 py-3 font-serif text-meta italic leading-normal text-ink-2">
           “{activeThread.anchor.text.slice(0, 180)}
           {activeThread.anchor.text.length > 180 ? "…" : ""}”
         </div>
       )}
 
       {/* Asks list */}
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto px-[22px] py-[18px]"
-      >
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-5.5 py-4.5">
         {activeThread && asks.length === 0 && !sending && (
           <Greeting onPick={(p) => void submit(p)} />
         )}
@@ -366,8 +363,8 @@ function ChatPanel({
       </div>
 
       {/* Composer */}
-      <div className="border-t border-rule-2 bg-paper px-[18px] pb-[18px] pt-3.5">
-        <div className="flex items-end gap-2 rounded-[10px] border border-rule bg-bg py-2 pl-3.5 pr-2">
+      <div className="border-t border-rule-2 bg-paper px-4.5 pb-4.5 pt-3.5">
+        <div className="flex items-end gap-2 rounded-md border border-rule bg-bg py-2 pl-3.5 pr-2">
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -379,12 +376,12 @@ function ChatPanel({
             }}
             rows={1}
             placeholder="Ask one thing about what you've read…"
-            className="max-h-[140px] flex-1 resize-none border-none bg-transparent py-1.5 font-serif text-[15px] leading-[1.5] text-ink outline-none"
+            className="max-h-35 flex-1 resize-none border-none bg-transparent py-1.5 font-serif text-prose leading-normal text-ink outline-hidden"
           />
           <button
             onClick={() => void submit()}
             disabled={!input.trim() || sending}
-            className={`inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-[13px] font-semibold text-white shadow-[0_4px_10px_-4px_rgba(0,0,0,.18)] transition-[opacity,filter] duration-150 btn-reset ${
+            className={`inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-meta font-semibold text-white shadow-[0_4px_10px_-4px_rgba(0,0,0,.18)] transition-[opacity,filter] duration-150 btn-reset ${
               input.trim() && !sending
                 ? "cursor-pointer opacity-100"
                 : "cursor-not-allowed opacity-50"
@@ -394,7 +391,7 @@ function ChatPanel({
             <Send size={14} /> Ask
           </button>
         </div>
-        <div className="mt-2 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.06em] text-ink-3">
+        <div className="mt-2 flex items-center gap-1.5 font-mono text-tiny uppercase tracking-[0.06em] text-ink-3">
           <span className="h-1 w-1 rounded-full bg-accent" />
           Each ask is independent — answers don&apos;t carry across questions
         </div>
@@ -416,10 +413,10 @@ function Greeting({ onPick }: { onPick: (prompt: string) => void }) {
   ];
   return (
     <div className="pb-4 pt-2">
-      <h3 className="mb-1.5 font-serif text-[22px] font-semibold leading-[1.25] text-ink [text-wrap:pretty]">
+      <h3 className="mb-1.5 font-serif text-2xl font-semibold leading-tight text-ink text-pretty">
         Ask me one thing.
       </h3>
-      <p className="mb-[18px] font-serif text-sm italic leading-[1.5] text-ink-2">
+      <p className="mb-4.5 font-serif text-sm italic leading-normal text-ink-2">
         I have only the chapters you&apos;ve read so far — and I treat every
         question as a fresh ask.
       </p>
@@ -448,7 +445,7 @@ function AskCard({
   onRegenerate?: () => void;
 }) {
   return (
-    <div className="card mb-3.5 overflow-hidden rounded-[10px] p-0">
+    <div className="card mb-3.5 overflow-hidden rounded-md p-0">
       {/* Question */}
       <div
         className="border-b border-rule-2 px-3.5 pb-2 pt-2.5"
@@ -456,19 +453,19 @@ function AskCard({
           background: "color-mix(in oklab, var(--accent) 5%, transparent)",
         }}
       >
-        <div className="kicker mb-1 text-[10px] text-accent">Ask</div>
-        <div className="font-serif text-[15px] font-semibold leading-[1.4] text-ink [text-wrap:pretty]">
+        <div className="kicker mb-1 text-tiny text-accent">Ask</div>
+        <div className="font-serif text-prose font-semibold leading-[1.4] text-ink text-pretty">
           {ask.question.text}
         </div>
       </div>
       {/* Answer */}
       <div className="px-3.5 pb-3.5 pt-3">
         <div className="mb-1.5 flex items-center justify-between">
-          <div className="kicker text-[10px]">Answer</div>
+          <div className="kicker text-tiny">Answer</div>
           {onRegenerate && (
             <button
               onClick={onRegenerate}
-              className="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium text-ink-3 btn-reset"
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2 py-0.5 text-kicker font-medium text-ink-3 btn-reset"
               title="Re-ask the same question"
             >
               <RotateCcw size={11} /> Regenerate

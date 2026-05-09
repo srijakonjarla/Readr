@@ -25,7 +25,7 @@ export default function ChromeHeader() {
         </Link>
         <Link
           href="/"
-          className="text-[17px] font-bold tracking-[-0.01em] text-ink"
+          className="text-h4 font-bold tracking-[-0.01em] text-ink"
         >
           Readr
         </Link>

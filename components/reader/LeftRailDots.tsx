@@ -23,8 +23,8 @@ function LeftRailDots({ toc, currentIndex, onSelect }: LeftRailDotsProps) {
             key={c.id}
             onClick={() => onSelect(i)}
             title={c.title}
-            className={`h-1.5 cursor-pointer rounded-[3px] border-0 p-0 transition-all duration-[250ms] ease-in-out ${
-              active ? "w-[18px] bg-accent" : "w-1.5 bg-rule"
+            className={`h-0.75 cursor-pointer rounded-sm border-0 p-0 transition-all duration-250 ease-in-out ${
+              active ? "w-4.5 bg-accent" : "w-0.75 bg-rule"
             }`}
           />
         );

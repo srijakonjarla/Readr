@@ -31,7 +31,7 @@ function TocDrawer({
     <>
       <div className="fixed inset-0 z-50 bg-transparent" onClick={onClose} />
       <aside
-        className="fixed bottom-4 left-4 top-[76px] z-[55] w-80 overflow-y-auto rounded-2xl border border-rule-2 bg-paper px-[22px] pb-[18px] pt-[22px] shadow-drawer"
+        className="fixed bottom-4 left-4 top-19 z-55 w-80 overflow-y-auto rounded-2xl border border-rule-2 bg-paper px-5.5 pb-4.5 pt-5.5 shadow-drawer"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3.5 flex items-center justify-between">
@@ -41,11 +41,11 @@ function TocDrawer({
           </button>
         </div>
 
-        <h3 className="m-0 text-[17px] font-bold leading-[1.2] tracking-[-0.01em] text-ink">
+        <h3 className="m-0 text-h4 font-bold leading-[1.2] tracking-[-0.01em] text-ink">
           {bookTitle}
         </h3>
         {author && (
-          <div className="mb-4 mt-1 text-[13px] text-ink-3">{author}</div>
+          <div className="mb-4 mt-1 text-meta text-ink-3">{author}</div>
         )}
 
         <div className="flex flex-col gap-0.5">

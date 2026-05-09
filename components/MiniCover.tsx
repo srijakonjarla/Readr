@@ -26,7 +26,7 @@ function MiniCover({
     >
       {title && (
         <div
-          className="absolute left-2 right-2 top-2.5 overflow-hidden text-[9px] font-semibold leading-[1.1] text-white"
+          className="absolute left-2 right-2 top-2.5 overflow-hidden text-micro font-semibold leading-[1.1] text-white"
           style={{
             fontFamily: FONT.serif,
             display: "-webkit-box",

@@ -221,7 +221,7 @@ function ReaderSection({
       />
 
       <div className="mx-auto max-w-reading pt-24 px-14 pb-36">
-        <h1 className="m-0 text-chapter font-bold tracking-[-0.035em] text-ink [text-wrap:balance]">
+        <h1 className="m-0 text-chapter font-bold tracking-[-0.035em] text-ink text-balance">
           {chapterTitle || "Untitled chapter"}
         </h1>
 
@@ -313,7 +313,7 @@ function ReaderSection({
       {!chatOpen && !showToc && (
         <button
           onClick={onOpenChat}
-          className="fixed bottom-7 right-7 z-[60] flex items-center gap-2.5 rounded-full bg-accent px-5 py-3.5 text-sm font-semibold tracking-[-0.01em] text-white shadow-cta transition-transform hover:scale-105"
+          className="fixed bottom-7 right-7 z-60 flex items-center gap-2.5 rounded-full bg-accent px-5 py-3.5 text-sm font-semibold tracking-[-0.01em] text-white shadow-cta transition-transform hover:scale-105"
         >
           <Sparkles size={16} />
           Ask the Companion

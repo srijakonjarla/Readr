@@ -98,7 +98,7 @@ function LibrarySection({
         <h1 className="mt-4 text-ink" style={headingStyle(64)}>
           {greetings()}
         </h1>
-        <p className="mt-4 max-w-[560px] text-[19px] font-normal text-ink-2">
+        <p className="mt-4 max-w-140 text-reading-size font-normal text-ink-2">
           {books.length === 0 ? (
             "Your shelf is empty. Upload an EPUB and settle in."
           ) : (
@@ -115,12 +115,12 @@ function LibrarySection({
       {/* Hero card */}
       {heroBook && (
         <div
-          className="card-hero mb-[72px] grid cursor-pointer grid-cols-[1fr_1.3fr]"
+          className="card-hero mb-18 grid cursor-pointer grid-cols-[1fr_1.3fr]"
           onClick={() => handleOpenHero(heroBook)}
         >
           {/* Left: gradient cover */}
           <div
-            className="flex min-h-[380px] flex-col justify-between p-10"
+            className="flex min-h-95 flex-col justify-between p-10"
             style={{ background: bookGradient(bookHue(heroBook.filename)) }}
           >
             <span className="hero-badge self-start">
@@ -135,7 +135,7 @@ function LibrarySection({
                 Your shelf
               </div>
               <div
-                className="max-w-[320px] text-[36px] font-semibold leading-[1.05] tracking-[-0.01em] text-white [text-wrap:balance]"
+                className="max-w-80 text-4xl font-semibold leading-[1.05] tracking-[-0.01em] text-white text-balance"
                 style={{ fontFamily: FONT.serif }}
               >
                 {heroBook.metadata?.title || heroBook.filename}
@@ -150,9 +150,9 @@ function LibrarySection({
 
           {/* Right: meta + resume */}
           <div className="flex flex-col px-11 py-10">
-            <div className="kicker mb-[18px]">Continue reading</div>
+            <div className="kicker mb-4.5">Continue reading</div>
             <p
-              className="m-0 mb-7 max-w-[460px] text-lg italic leading-[1.55] text-ink-2 [text-wrap:pretty]"
+              className="m-0 mb-7 max-w-115 text-lg italic leading-[1.55] text-ink-2 text-pretty"
               style={{ fontFamily: FONT.serif }}
             >
               {heroBook.metadata?.description ||
@@ -192,7 +192,7 @@ function LibrarySection({
       {books.length > 0 && (
         <div>
           <div className="mb-7 flex items-baseline justify-between">
-            <h2 className="m-0 text-[28px] font-bold tracking-[-0.02em] text-ink">
+            <h2 className="m-0 text-h2 font-bold tracking-[-0.02em] text-ink">
               Your library
             </h2>
             <div className="flex gap-2">
@@ -200,7 +200,7 @@ function LibrarySection({
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
-                  className="nav-chip border border-rule-2 px-[13px] py-[7px] text-xs"
+                  className="nav-chip border border-rule-2 px-3.25 py-1.75 text-xs"
                   aria-pressed={filter === f}
                 >
                   {f === "all"
@@ -213,26 +213,26 @@ function LibrarySection({
             </div>
           </div>
 
-          <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(360px,1fr))]">
+          <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(360px,1fr))]">
             {otherBooks.map((book) => {
               const cardHue = bookHue(book.filename);
               return (
                 <button
                   key={book.filename}
                   onClick={() => onBookSelect(book)}
-                  className="card book-card group flex w-full items-stretch gap-[18px] p-[18px] text-left transition-all hover:-translate-y-0.5"
+                  className="card book-card group flex w-full items-stretch gap-4.5 p-4.5 text-left transition-all hover:-translate-y-0.5"
                 >
                   <MiniCover hue={cardHue} title={book.metadata?.title} />
                   <div className="flex min-w-0 flex-1 flex-col">
                     <div className="mb-1 truncate text-base font-semibold leading-[1.2] tracking-[-0.01em] text-ink">
                       {book.metadata?.title || book.filename}
                     </div>
-                    <div className="mb-3 text-[13px] text-ink-3">
+                    <div className="mb-3 text-meta text-ink-3">
                       {book.metadata?.creator || "Unknown author"}
                     </div>
                     <div className="flex-1" />
                     <div className="flex items-center justify-between gap-2">
-                      <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.02em] text-ink-3">
+                      <span className="inline-flex items-center gap-1.5 text-kicker font-semibold tracking-[0.02em] text-ink-3">
                         <BookOpen size={12} /> EPUB
                       </span>
                       {book.metadata?.publisher && (

@@ -1,53 +1,548 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;500&display=swap")
+layer(base);
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-/* ───────── Theme tokens (Modern direction) ───────── */
-:root {
-  --bg: #f6f1e7;
-  --bg-2: #eee7d6;
-  --paper: #fbf6ea;
-  --ink: #1f1812;
-  --ink-2: #4a3f32;
-  --ink-3: #8b7c66;
-  --ink-4: #b5a78f;
-  --rule: #c9b996;
-  --rule-2: #e0d4b7;
-  --accent: #8b3a1c; /* deep rust / sienna */
-  --accent-2: #2d5039; /* moss green secondary */
-  --accent-soft: #ebd9c4;
-  --reading-width: 720px;
-  --reading-size: 19px;
-  --reading-leading: 1.7;
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme {
+  --font-sans: Inter Tight, ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Source Serif 4", "Iowan Old Style", Georgia, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-display: Inter Tight, ui-sans-serif, system-ui, sans-serif;
+
+  --color-bg: var(--bg);
+  --color-bg-2: var(--bg-2);
+  --color-paper: var(--paper);
+
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-ink-4: var(--ink-4);
+  --color-ink: var(--ink);
+
+  --color-rule-2: var(--rule-2);
+  --color-rule: var(--rule);
+
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+
+  --text-micro: 9px;
+  --text-micro--line-height: 1.1;
+  --text-tiny: 10px;
+  --text-tiny--line-height: 1.3;
+  --text-kicker: 11px;
+  --text-kicker--line-height: 1.3;
+  --text-prose: 15px;
+  --text-prose--line-height: 1.5;
+  --text-h4: 17px;
+  --text-h4--line-height: 1.2;
+  --text-h2: 28px;
+  --text-h2--line-height: 1.2;
+  --text-chapter: 56px;
+  --text-chapter--line-height: 1;
+  --text-hero: 64px;
+  --text-hero--line-height: 1;
+
+  --radius-pill: 999px;
+
+  --shadow-card:
+    0 1px 0 rgba(31, 27, 22, 0.04), 0 24px 60px -30px rgba(31, 27, 22, 0.18);
+  --shadow-mini: 0 6px 16px -8px rgba(31, 27, 22, 0.3);
+  --shadow-pill:
+    0 1px 0 rgba(255, 255, 255, 0.5) inset,
+    0 8px 24px -10px rgba(31, 27, 22, 0.18);
+  --shadow-drawer: 0 24px 60px -20px rgba(31, 27, 22, 0.25);
+  --shadow-pop: 0 12px 28px -10px rgba(0, 0, 0, 0.35);
+  --shadow-cta:
+    0 1px 0 rgba(255, 255, 255, 0.25) inset,
+    0 12px 28px -8px rgba(0, 0, 0, 0.25);
+
+  --container-page: 1320px;
+  --container-reading: calc(var(--reading-width) + 200px);
+
+  --animate-pulse2: pulse2 2s ease-in-out infinite;
+  --animate-dot-pulse: dot-pulse 1.2s infinite ease-in-out;
+
+  @keyframes pulse2 {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.4;
+    }
+  }
+  @keyframes dot-pulse {
+    0%,
+    80%,
+    100% {
+      opacity: 0.2;
+    }
+    40% {
+      opacity: 1;
+    }
+  }
 }
 
-[data-theme="sepia"] {
-  --bg: #f4ecd7;
-  --bg-2: #ece2c6;
-  --paper: #faf3dd;
-  --ink: #1f1812;
-  --ink-2: #5a4a30;
-  --ink-3: #8a7551;
-  --rule: #cfbe99;
-  --rule-2: #dcceab;
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
 }
 
-[data-theme="dark"] {
-  --bg: #0e0d0b;
-  --bg-2: #181712;
-  --paper: #14130f;
-  --ink: #f1ecdd;
-  --ink-2: #b8b2a0;
-  --ink-3: #7a7466;
-  --ink-4: #56503f;
-  --rule: #2a2820;
-  --rule-2: #211f19;
-  --accent-soft: #3a2f18;
+/* ───────── Component primitives ───────── */
+@utility float-pill {
+  /* Floating chrome pills (reader top bar) */
+  pointer-events: auto;
+  background: color-mix(in oklab, var(--paper) 88%, transparent);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  border: 1px solid var(--rule-2);
+  border-radius: 999px;
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.5) inset,
+    0 8px 24px -10px rgba(31, 27, 22, 0.18);
+  color: var(--ink-2);
+}
+@utility pill-btn {
+  all: unset;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-2);
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+  &:hover {
+    background: color-mix(in oklab, var(--ink) 6%, transparent);
+    color: var(--ink);
+  }
+}
+@utility pill-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--rule-2);
+  margin: 0 2px;
+}
+@utility nav-chip {
+  /* Chip pill nav (top of library) */
+  all: unset;
+  cursor: pointer;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-3);
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+  &:hover {
+    color: var(--ink-2);
+  }
+  &[aria-pressed="true"] {
+    background: var(--bg-2);
+    color: var(--ink);
+  }
+}
+@utility btn-cta {
+  /* Buttons */
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  padding: 9px 16px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  transition: filter 0.15s ease;
+  &:hover {
+    filter: brightness(0.95);
+  }
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+@utility btn-ink {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  padding: 12px 20px;
+  border-radius: 10px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 14px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: filter 0.15s ease;
+  &:hover {
+    filter: brightness(1.1);
+  }
+}
+@utility btn-soft {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: var(--bg-2);
+  border: 1px solid var(--rule-2);
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.15s ease;
+  &:hover {
+    background: color-mix(in oklab, var(--ink) 8%, var(--bg-2));
+  }
+}
+@utility card {
+  /* Cards */
+  background: var(--paper);
+  border-radius: 14px;
+  border: 1px solid var(--rule-2);
+  transition:
+    background-color 0.15s ease,
+    transform 0.15s ease,
+    box-shadow 0.25s ease;
+}
+@utility card-hero {
+  background: var(--paper);
+  border-radius: 20px;
+  border: 1px solid var(--rule-2);
+  overflow: hidden;
+  box-shadow:
+    0 1px 0 rgba(31, 27, 22, 0.04),
+    0 24px 60px -30px rgba(31, 27, 22, 0.18);
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+  &:hover {
+    transform: translateY(-3px);
+  }
+}
+@utility status-pill {
+  /* Status pill (animated dot + label) */
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+}
+@utility status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+@utility chip-accent {
+  /* Accent chip */
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+@utility kicker {
+  /* Meta kicker text (uppercase eyebrow) */
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-3);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+@utility popover {
+  /* Dark popover (anchored above text selection / on highlight click).
+     Used by SelectionPopover and HighlightPopover. */
+  position: fixed;
+  transform: translate(-50%, -100%);
+  background: var(--ink);
+  border-radius: 12px;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 12px 28px -10px rgba(0, 0, 0, 0.35);
+  z-index: 90;
+}
+@utility popover-btn {
+  all: unset;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 12px;
+  font-weight: 500;
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}
+@utility popover-btn-primary {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+@utility toc-chapter-btn {
+  /* Sidebar / drawer chapter button — used in TocDrawer. */
+  all: unset;
+  cursor: pointer;
+  padding: 10px 12px;
+  border-radius: 8px;
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: 10px;
+  align-items: center;
+  background: transparent;
+  &[data-active="true"] {
+    background: color-mix(in oklab, var(--accent) 12%, transparent);
+  }
+  &[data-active="true"] .toc-chapter-num {
+    color: var(--accent);
+  }
+  &[data-active="true"] .toc-chapter-title {
+    font-weight: 600;
+    color: var(--ink);
+  }
+}
+@utility toc-chapter-num {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-3);
+  .toc-chapter-btn[data-active="true"] & {
+    color: var(--accent);
+  }
+}
+@utility toc-chapter-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  .toc-chapter-btn[data-active="true"] & {
+    font-weight: 600;
+    color: var(--ink);
+  }
+}
+@utility drawer-action-btn {
+  /* TocDrawer "Quick action" row button (full-width, disabled style). */
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-2);
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+}
+@utility drawer-divider {
+  /* Drawer divider line. */
+  height: 1px;
+  background: var(--rule-2);
+  margin: 18px 0 14px;
+}
+@utility btn-reset {
+  /* Strip default <button> styling so Tailwind utilities can fully restyle.
+     Defined in @layer components so utility classes (e.g. text-[11px],
+     inline-flex, gap-*) reliably override its `all: unset` reset. */
+  all: unset;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+@utility mono-caption {
+  /* Mono uppercase caption (e.g., "Model", "Context", "ASK"). */
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--ink-3);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+@utility chip-mini {
+  /* Compact pill chip used for chat-panel tags / model toggle. */
+  font-size: 11px;
+  padding: 4px 10px;
+}
+@utility book-card {
+  /* Library list card with accent-soft hover. */
+  &:hover {
+    background: var(--accent-soft);
+    border-color: color-mix(in oklab, var(--accent) 35%, transparent);
+  }
+}
+@utility hero-badge {
+  /* "Currently reading" badge (translucent over hero gradient). */
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+@utility hero-badge-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 3px;
+  background: #fff;
+}
+@utility meta-chip {
+  /* Pill-shaped, bordered metadata chip used in book card metadata rows. */
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--rule-2);
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 140px;
+}
+@utility progress-track {
+  /* Horizontal accent progress track (book-list resume bar etc). */
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--bg-2);
+  overflow: hidden;
+}
+@utility progress-fill {
+  height: 100%;
+  background: var(--accent);
+}
+@utility rd-pending {
+  /* Pending selection — painted while the selection popover is open so the
+     user keeps a visible cue regardless of the live Selection state. Softer
+     than the native ::selection because it's persistent, not transient. */
+  &mark {
+    background: color-mix(in oklab, var(--accent) 18%, transparent);
+    color: inherit;
+    padding: 0;
+    border-radius: 0;
+  }
+}
+@utility rd-highlight {
+  /* Reading pane mark */
+  &mark {
+    background: color-mix(in oklab, var(--accent-soft) 80%, transparent);
+    padding: 1px 2px;
+    border-radius: 2px;
+    color: inherit;
+    cursor: pointer;
+  }
+}
+@utility rd-thread {
+  &mark {
+    background: color-mix(in oklab, var(--accent) 22%, transparent);
+    border-bottom: 1.5px solid var(--accent);
+    padding: 1px 2px;
+    border-radius: 2px;
+    color: inherit;
+    cursor: pointer;
+  }
 }
 
-/* ───────── Base ───────── */
+@layer utilities {
+  /* ───────── Theme tokens (Modern direction) ───────── */
+  :root {
+    --bg: #f6f1e7;
+    --bg-2: #eee7d6;
+    --paper: #fbf6ea;
+    --ink: #1f1812;
+    --ink-2: #4a3f32;
+    --ink-3: #8b7c66;
+    --ink-4: #b5a78f;
+    --rule: #c9b996;
+    --rule-2: #e0d4b7;
+    --accent: #8b3a1c; /* deep rust / sienna */
+    --accent-2: #2d5039; /* moss green secondary */
+    --accent-soft: #ebd9c4;
+    --reading-width: 720px;
+    --reading-size: 19px;
+    --reading-leading: 1.7;
+  }
+
+  [data-theme="sepia"] {
+    --bg: #f4ecd7;
+    --bg-2: #ece2c6;
+    --paper: #faf3dd;
+    --ink: #1f1812;
+    --ink-2: #5a4a30;
+    --ink-3: #8a7551;
+    --rule: #cfbe99;
+    --rule-2: #dcceab;
+  }
+
+  [data-theme="dark"] {
+    --bg: #0e0d0b;
+    --bg-2: #181712;
+    --paper: #14130f;
+    --ink: #f1ecdd;
+    --ink-2: #b8b2a0;
+    --ink-3: #7a7466;
+    --ink-4: #56503f;
+    --rule: #2a2820;
+    --rule-2: #211f19;
+    --accent-soft: #3a2f18;
+  }
+
+  /* ───────── Base ───────── */
+}
 @layer base {
   html,
   body {
@@ -94,407 +589,6 @@
   body > * {
     position: relative;
     z-index: 1;
-  }
-}
-
-/* ───────── Component primitives ───────── */
-@layer components {
-  /* Floating chrome pills (reader top bar) */
-  .float-pill {
-    pointer-events: auto;
-    background: color-mix(in oklab, var(--paper) 88%, transparent);
-    backdrop-filter: blur(14px) saturate(1.2);
-    -webkit-backdrop-filter: blur(14px) saturate(1.2);
-    border: 1px solid var(--rule-2);
-    border-radius: 999px;
-    padding: 4px;
-    display: inline-flex;
-    align-items: center;
-    gap: 0;
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.5) inset,
-      0 8px 24px -10px rgba(31, 27, 22, 0.18);
-    color: var(--ink-2);
-  }
-  .pill-btn {
-    all: unset;
-    cursor: pointer;
-    padding: 8px;
-    border-radius: 999px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--ink-2);
-    transition:
-      background-color 0.15s ease,
-      color 0.15s ease;
-  }
-  .pill-btn:hover {
-    background: color-mix(in oklab, var(--ink) 6%, transparent);
-    color: var(--ink);
-  }
-  .pill-divider {
-    width: 1px;
-    height: 18px;
-    background: var(--rule-2);
-    margin: 0 2px;
-  }
-
-  /* Chip pill nav (top of library) */
-  .nav-chip {
-    all: unset;
-    cursor: pointer;
-    padding: 8px 14px;
-    border-radius: 999px;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--ink-3);
-    transition:
-      background-color 0.15s ease,
-      color 0.15s ease;
-  }
-  .nav-chip:hover {
-    color: var(--ink-2);
-  }
-  .nav-chip[aria-pressed="true"] {
-    background: var(--bg-2);
-    color: var(--ink);
-  }
-
-  /* Buttons */
-  .btn-cta {
-    all: unset;
-    box-sizing: border-box;
-    cursor: pointer;
-    padding: 9px 16px;
-    border-radius: 8px;
-    background: var(--accent);
-    color: #fff;
-    font-size: 13px;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    white-space: nowrap;
-    transition: filter 0.15s ease;
-  }
-  .btn-cta:hover {
-    filter: brightness(0.95);
-  }
-  .btn-cta:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-  .btn-ink {
-    all: unset;
-    box-sizing: border-box;
-    cursor: pointer;
-    padding: 12px 20px;
-    border-radius: 10px;
-    background: var(--ink);
-    color: var(--bg);
-    font-size: 14px;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    transition: filter 0.15s ease;
-  }
-  .btn-ink:hover {
-    filter: brightness(1.1);
-  }
-  .btn-soft {
-    all: unset;
-    box-sizing: border-box;
-    cursor: pointer;
-    padding: 8px 14px;
-    border-radius: 8px;
-    background: var(--bg-2);
-    border: 1px solid var(--rule-2);
-    color: var(--ink-2);
-    font-size: 13px;
-    font-weight: 500;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    transition: background-color 0.15s ease;
-  }
-  .btn-soft:hover {
-    background: color-mix(in oklab, var(--ink) 8%, var(--bg-2));
-  }
-
-  /* Cards */
-  .card {
-    background: var(--paper);
-    border-radius: 14px;
-    border: 1px solid var(--rule-2);
-    transition:
-      background-color 0.15s ease,
-      transform 0.15s ease,
-      box-shadow 0.25s ease;
-  }
-  .card-hero {
-    background: var(--paper);
-    border-radius: 20px;
-    border: 1px solid var(--rule-2);
-    overflow: hidden;
-    box-shadow:
-      0 1px 0 rgba(31, 27, 22, 0.04),
-      0 24px 60px -30px rgba(31, 27, 22, 0.18);
-    transition:
-      transform 0.25s ease,
-      box-shadow 0.25s ease;
-  }
-  .card-hero:hover {
-    transform: translateY(-3px);
-  }
-
-  /* Status pill (animated dot + label) */
-  .status-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 5px 11px;
-    border-radius: 999px;
-    background: color-mix(in oklab, var(--accent) 12%, transparent);
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--accent);
-    letter-spacing: 0.02em;
-  }
-  .status-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--accent);
-  }
-
-  /* Accent chip */
-  .chip-accent {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 12px;
-    border-radius: 999px;
-    background: color-mix(in oklab, var(--accent) 12%, transparent);
-    color: var(--accent);
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-  }
-
-  /* Meta kicker text (uppercase eyebrow) */
-  .kicker {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--ink-3);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  /* Dark popover (anchored above text selection / on highlight click).
-     Used by SelectionPopover and HighlightPopover. */
-  .popover {
-    position: fixed;
-    transform: translate(-50%, -100%);
-    background: var(--ink);
-    border-radius: 12px;
-    padding: 4px;
-    display: flex;
-    align-items: center;
-    box-shadow: 0 12px 28px -10px rgba(0, 0, 0, 0.35);
-    z-index: 90;
-  }
-  .popover-btn {
-    all: unset;
-    cursor: pointer;
-    padding: 8px 12px;
-    border-radius: 8px;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    color: rgba(255, 255, 255, 0.85);
-    font-size: 12px;
-    font-weight: 500;
-  }
-  .popover-btn:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
-  }
-  .popover-btn-primary {
-    background: var(--accent);
-    color: #fff;
-    font-weight: 600;
-  }
-
-  /* Sidebar / drawer chapter button — used in TocDrawer. */
-  .toc-chapter-btn {
-    all: unset;
-    cursor: pointer;
-    padding: 10px 12px;
-    border-radius: 8px;
-    display: grid;
-    grid-template-columns: 24px 1fr;
-    gap: 10px;
-    align-items: center;
-    background: transparent;
-  }
-  .toc-chapter-btn[data-active="true"] {
-    background: color-mix(in oklab, var(--accent) 12%, transparent);
-  }
-  .toc-chapter-num {
-    font-family: "JetBrains Mono", ui-monospace, monospace;
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--ink-3);
-  }
-  .toc-chapter-btn[data-active="true"] .toc-chapter-num {
-    color: var(--accent);
-  }
-  .toc-chapter-title {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--ink-2);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .toc-chapter-btn[data-active="true"] .toc-chapter-title {
-    font-weight: 600;
-    color: var(--ink);
-  }
-
-  /* TocDrawer "Quick action" row button (full-width, disabled style). */
-  .drawer-action-btn {
-    all: unset;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 12px;
-    border-radius: 8px;
-    width: 100%;
-    box-sizing: border-box;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--ink-2);
-  }
-  .drawer-action-btn:disabled {
-    cursor: not-allowed;
-    opacity: 0.7;
-  }
-
-  /* Drawer divider line. */
-  .drawer-divider {
-    height: 1px;
-    background: var(--rule-2);
-    margin: 18px 0 14px;
-  }
-
-  /* Strip default <button> styling so Tailwind utilities can fully restyle.
-     Defined in @layer components so utility classes (e.g. text-[11px],
-     inline-flex, gap-*) reliably override its `all: unset` reset. */
-  .btn-reset {
-    all: unset;
-    cursor: pointer;
-    box-sizing: border-box;
-  }
-
-  /* Mono uppercase caption (e.g., "Model", "Context", "ASK"). */
-  .mono-caption {
-    font-family: "JetBrains Mono", ui-monospace, monospace;
-    font-size: 11px;
-    color: var(--ink-3);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  /* Compact pill chip used for chat-panel tags / model toggle. */
-  .chip-mini {
-    font-size: 11px;
-    padding: 4px 10px;
-  }
-
-  /* Library list card with accent-soft hover. */
-  .book-card:hover {
-    background: var(--accent-soft);
-    border-color: color-mix(in oklab, var(--accent) 35%, transparent);
-  }
-
-  /* "Currently reading" badge (translucent over hero gradient). */
-  .hero-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    padding: 5px 11px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.12);
-    backdrop-filter: blur(8px);
-    color: rgba(255, 255, 255, 0.92);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-  .hero-badge-dot {
-    width: 5px;
-    height: 5px;
-    border-radius: 3px;
-    background: #fff;
-  }
-
-  /* Pill-shaped, bordered metadata chip used in book card metadata rows. */
-  .meta-chip {
-    font-size: 11px;
-    padding: 3px 8px;
-    border-radius: 999px;
-    background: var(--bg);
-    border: 1px solid var(--rule-2);
-    color: var(--ink-3);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 140px;
-  }
-
-  /* Horizontal accent progress track (book-list resume bar etc). */
-  .progress-track {
-    flex: 1;
-    height: 6px;
-    border-radius: 3px;
-    background: var(--bg-2);
-    overflow: hidden;
-  }
-  .progress-fill {
-    height: 100%;
-    background: var(--accent);
-  }
-
-  /* Pending selection — painted while the selection popover is open so the
-     user keeps a visible cue regardless of the live Selection state. Softer
-     than the native ::selection because it's persistent, not transient. */
-  mark.rd-pending {
-    background: color-mix(in oklab, var(--accent) 18%, transparent);
-    color: inherit;
-    padding: 0;
-    border-radius: 0;
-  }
-
-  /* Reading pane mark */
-  mark.rd-highlight {
-    background: color-mix(in oklab, var(--accent-soft) 80%, transparent);
-    padding: 1px 2px;
-    border-radius: 2px;
-    color: inherit;
-    cursor: pointer;
-  }
-  mark.rd-thread {
-    background: color-mix(in oklab, var(--accent) 22%, transparent);
-    border-bottom: 1.5px solid var(--accent);
-    padding: 1px 2px;
-    border-radius: 2px;
-    color: inherit;
-    cursor: pointer;
   }
 }
 

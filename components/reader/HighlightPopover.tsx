@@ -28,10 +28,7 @@ function HighlightPopover({
 }: HighlightPopoverProps) {
   return (
     <>
-      <div
-        className="fixed inset-0 z-[80] bg-transparent"
-        onClick={onDismiss}
-      />
+      <div className="fixed inset-0 z-80 bg-transparent" onClick={onDismiss} />
       <div className="popover" style={popoverPosition(x, y)}>
         <button onClick={onPrimary} className="popover-btn popover-btn-primary">
           <Sparkles size={13} />{" "}

@@ -62,10 +62,10 @@ function UploadSection({ onUploadSuccess }: UploadSectionProps) {
   return (
     <section className="mx-auto max-w-xl px-6 pb-32">
       <div className="card p-10">
-        <h2 className="font-serif text-[28px] font-semibold tracking-[-0.01em] text-ink">
+        <h2 className="font-serif text-h2 font-semibold tracking-[-0.01em] text-ink">
           Add a book
         </h2>
-        <p className="mt-1 text-[15px] text-ink-2">
+        <p className="mt-1 text-prose text-ink-2">
           Upload an EPUB to start reading.
         </p>
 
