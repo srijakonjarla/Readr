@@ -12,6 +12,12 @@ const config = [
     ],
   },
   ...compat.extends("next/core-web-vitals"),
+  {
+    rules: {
+      // Apostrophes and quotes inside JSX text are fine as-is.
+      "react/no-unescaped-entities": "off",
+    },
+  },
 ];
 
 export default config;

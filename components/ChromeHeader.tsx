@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ArrowLeft, Moon, Plus, Sun } from "lucide-react";
+import { ArrowLeft, LogOut, Moon, Plus, Sun } from "lucide-react";
 import { useTheme } from "./ThemeProvider";
 
 export default function ChromeHeader() {
@@ -12,24 +12,30 @@ export default function ChromeHeader() {
 
   const isLibrary = pathname === "/";
   const isReader = pathname.startsWith("/read/");
+  const isChromeFree =
+    pathname === "/login" ||
+    pathname.startsWith("/auth/") ||
+    pathname === "/privacy" ||
+    pathname === "/terms";
+
+  if (isChromeFree) return null;
 
   return (
     <header className="mx-auto flex max-w-page items-center justify-between px-14 pb-8 pt-10">
-      <div className="flex items-center gap-3.5">
-        <Link
-          href="/"
-          className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-white"
-          aria-label="Home"
-        >
-          <span className="text-base font-extrabold tracking-[-0.02em]">R</span>
-        </Link>
-        <Link
-          href="/"
-          className="text-h4 font-bold tracking-[-0.01em] text-ink"
-        >
-          Readr
-        </Link>
-      </div>
+      <Link href="/" aria-label="Readr — home" className="block">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={
+            theme === "dark"
+              ? "/brand/readr-logo-dark.svg"
+              : "/brand/readr-logo-horizontal.svg"
+          }
+          alt="Readr"
+          width={101}
+          height={32}
+          className="h-8 w-auto"
+        />
+      </Link>
 
       <div className="flex items-center gap-2">
         {!isLibrary && (
@@ -50,6 +56,16 @@ export default function ChromeHeader() {
             <Plus size={14} strokeWidth={2.4} /> Add EPUB
           </Link>
         )}
+        <form action="/auth/signout" method="post">
+          <button
+            type="submit"
+            className="pill-btn"
+            aria-label="Sign out"
+            title="Sign out"
+          >
+            <LogOut size={16} />
+          </button>
+        </form>
       </div>
     </header>
   );

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 120" role="img" aria-label="Readr">
+  <rect width="320" height="120" fill="#1F1B16"></rect>
+  <g transform="translate(20,12)">
+    <rect width="96" height="96" rx="18" fill="#F5EFE3"></rect>
+    <rect x="15" y="24" width="30" height="48" rx="2.5" fill="#1F1B16"></rect>
+    <rect x="51" y="24" width="30" height="48" rx="2.5" fill="#1F1B16"></rect>
+    <rect x="19.5" y="33" width="21" height="2.25" fill="#B5A78F"></rect>
+    <rect x="19.5" y="39" width="21" height="2.25" fill="#B5A78F"></rect>
+    <rect x="19.5" y="45" width="15" height="2.25" fill="#B5A78F"></rect>
+    <rect x="55.5" y="33" width="21" height="2.25" fill="#B5A78F"></rect>
+    <rect x="55.5" y="39" width="21" height="2.25" fill="#B5A78F"></rect>
+    <rect x="55.5" y="45" width="16.5" height="2.25" fill="#B5A78F"></rect>
+    <rect x="63" y="21" width="4.5" height="33" fill="#C99B36"></rect>
+    <polygon points="63,54 67.5,54 65.25,58.5" fill="#C99B36"></polygon>
+  </g>
+  <g transform="translate(140,0)">
+    <text x="0" y="82" font-family="&#39;Lora&#39;,&#39;Iowan Old Style&#39;,Georgia,serif" font-weight="700" font-size="84" fill="#F5EFE3" letter-spacing="-2">Readr</text>
+    <circle cx="245" cy="76" r="6" fill="#C99B36"></circle>
+  </g>
+</svg>
