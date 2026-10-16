@@ -3,6 +3,7 @@ import { loadBookJsonFromDb } from "@/lib/epub";
 import { getOpenAIStream } from "@/lib/services/openai";
 import { getClaudeStream } from "@/lib/services/claude";
 import type { BookJsonData } from "@/shared/api";
+import { requireUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 // Allow long-running streams (default is short for serverless); we run on the
@@ -10,6 +11,8 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 export async function POST(req: Request): Promise<Response> {
+  const auth = await requireUser();
+  if (!auth.ok) return auth.response;
   let body: unknown;
   try {
     body = await req.json();
@@ -28,7 +31,7 @@ export async function POST(req: Request): Promise<Response> {
   // Load + spoiler-trim the book context.
   let trimmedBookJson: BookJsonData;
   try {
-    const bookJsonData = await loadBookJsonFromDb(filename);
+    const bookJsonData = await loadBookJsonFromDb(auth.userId, filename);
     const totalChapters = bookJsonData.chapters.length;
     const cutoff =
       typeof currentChapterIndex === "number" && currentChapterIndex >= 0

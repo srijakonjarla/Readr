@@ -1,6 +1,7 @@
 import { sql } from "./index";
 
 export interface DbBook {
+  userId: string;
   filename: string;
   blobUrl: string;
   blobPathname: string;
@@ -26,6 +27,7 @@ export interface DbAsset {
 }
 
 interface BookRow {
+  user_id: string;
   filename: string;
   blob_url: string;
   blob_pathname: string;
@@ -36,6 +38,7 @@ interface BookRow {
 }
 
 const rowToBook = (r: BookRow): DbBook => ({
+  userId: r.user_id,
   filename: r.filename,
   blobUrl: r.blob_url,
   blobPathname: r.blob_pathname,
@@ -47,27 +50,33 @@ const rowToBook = (r: BookRow): DbBook => ({
 
 export async function insertBook(b: Omit<DbBook, "uploadedAt">): Promise<void> {
   await sql`
-    INSERT INTO books (filename, blob_url, blob_pathname, title, author, size_bytes)
-    VALUES (${b.filename}, ${b.blobUrl}, ${b.blobPathname}, ${b.title}, ${b.author}, ${b.sizeBytes})
+    INSERT INTO books (user_id, filename, blob_url, blob_pathname, title, author, size_bytes)
+    VALUES (${b.userId}, ${b.filename}, ${b.blobUrl}, ${b.blobPathname}, ${b.title}, ${b.author}, ${b.sizeBytes})
   `;
 }
 
-export async function listBooks(): Promise<DbBook[]> {
+export async function listBooks(userId: string): Promise<DbBook[]> {
   const rows = await sql<BookRow[]>`
-    SELECT * FROM books ORDER BY uploaded_at DESC
+    SELECT * FROM books WHERE user_id = ${userId} ORDER BY uploaded_at DESC
   `;
   return rows.map(rowToBook);
 }
 
-export async function getBook(filename: string): Promise<DbBook | null> {
+export async function getBook(
+  userId: string,
+  filename: string,
+): Promise<DbBook | null> {
   const rows = await sql<BookRow[]>`
-    SELECT * FROM books WHERE filename = ${filename}
+    SELECT * FROM books WHERE user_id = ${userId} AND filename = ${filename}
   `;
   return rows.length > 0 ? rowToBook(rows[0]) : null;
 }
 
-export async function deleteBook(filename: string): Promise<void> {
-  await sql`DELETE FROM books WHERE filename = ${filename}`;
+export async function deleteBook(
+  userId: string,
+  filename: string,
+): Promise<void> {
+  await sql`DELETE FROM books WHERE user_id = ${userId} AND filename = ${filename}`;
 }
 
 interface ChapterRow {
@@ -100,20 +109,28 @@ export async function insertChapters(chapters: DbChapter[]): Promise<void> {
   `;
 }
 
-export async function listChapters(filename: string): Promise<DbChapter[]> {
+// Chapters and assets have no owner column of their own; they're scoped
+// through the parent book.
+export async function listChapters(
+  userId: string,
+  filename: string,
+): Promise<DbChapter[]> {
   const rows = await sql<ChapterRow[]>`
-    SELECT * FROM chapters WHERE filename = ${filename} ORDER BY idx
+    SELECT c.* FROM chapters c JOIN books b ON b.filename = c.filename
+    WHERE b.user_id = ${userId} AND c.filename = ${filename} ORDER BY c.idx
   `;
   return rows.map(rowToChapter);
 }
 
 export async function getChapter(
+  userId: string,
   filename: string,
   chapterId: string,
 ): Promise<DbChapter | null> {
   const rows = await sql<ChapterRow[]>`
-    SELECT * FROM chapters
-    WHERE filename = ${filename} AND chapter_id = ${chapterId}
+    SELECT c.* FROM chapters c JOIN books b ON b.filename = c.filename
+    WHERE b.user_id = ${userId} AND c.filename = ${filename}
+      AND c.chapter_id = ${chapterId}
   `;
   return rows.length > 0 ? rowToChapter(rows[0]) : null;
 }
@@ -139,12 +156,14 @@ export async function insertAssets(assets: DbAsset[]): Promise<void> {
 }
 
 export async function getAsset(
+  userId: string,
   filename: string,
   assetId: string,
 ): Promise<{ mime: string; bytes: Buffer } | null> {
   const rows = await sql<AssetRow[]>`
-    SELECT * FROM assets
-    WHERE filename = ${filename} AND asset_id = ${assetId}
+    SELECT a.* FROM assets a JOIN books b ON b.filename = a.filename
+    WHERE b.user_id = ${userId} AND a.filename = ${filename}
+      AND a.asset_id = ${assetId}
   `;
   if (rows.length === 0) return null;
   return { mime: rows[0].mime, bytes: rows[0].bytes };

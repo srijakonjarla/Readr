@@ -9,13 +9,14 @@ const MAX_CHARS_PER_CHAPTER_JSON = 5000;
  * plain text and truncates each chapter to keep prompts within token limits.
  */
 export async function loadBookJsonFromDb(
+  userId: string,
   filename: string,
 ): Promise<BookJsonData> {
-  const book = await getBook(filename);
+  const book = await getBook(userId, filename);
   if (!book) {
     throw new Error("Book not found.");
   }
-  const dbChapters = await listChapters(filename);
+  const dbChapters = await listChapters(userId, filename);
   const metadata = {
     title: book.title || filename,
     creator: book.author || "",

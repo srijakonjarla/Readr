@@ -1,5 +1,6 @@
 import { getChapter } from "@/lib/db/books";
 import { ChapterParams, parseOrError } from "@/lib/schemas";
+import { requireUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -7,6 +8,8 @@ export async function GET(
   _req: Request,
   context: { params: Promise<{ filename: string; chapterId: string }> },
 ): Promise<Response> {
+  const auth = await requireUser();
+  if (!auth.ok) return auth.response;
   const params = await context.params;
   const validated = parseOrError(ChapterParams, {
     filename: decodeURIComponent(params.filename),
@@ -16,7 +19,7 @@ export async function GET(
   const { filename, chapterId } = validated.data;
 
   try {
-    const chapter = await getChapter(filename, chapterId);
+    const chapter = await getChapter(auth.userId, filename, chapterId);
     if (!chapter) {
       return Response.json({ error: "Chapter not found" }, { status: 404 });
     }

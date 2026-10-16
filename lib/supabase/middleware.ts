@@ -45,6 +45,12 @@ export async function updateSession(request: NextRequest) {
     (p) => pathname === p || pathname.startsWith(p + "/"),
   );
 
+  if (!user && pathname.startsWith("/api/")) {
+    // API callers are fetch() from the client; a redirect would hand them the
+    // login page's HTML instead of a status they can act on.
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   if (!user && !isPublic) {
     // Bounce unauthed visitors to `/` (which renders the login form) instead
     // of `/login`, so the URL stays on the home page.

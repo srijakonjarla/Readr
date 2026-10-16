@@ -9,6 +9,7 @@ import {
   readEpubMetadata,
 } from "@/lib/epub";
 import { insertAssets, insertBook, insertChapters } from "@/lib/db/books";
+import { requireUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -16,6 +17,8 @@ export const maxDuration = 60;
 const MAX_BYTES = 50 * 1024 * 1024;
 
 export async function POST(req: Request): Promise<Response> {
+  const auth = await requireUser();
+  if (!auth.ok) return auth.response;
   let formData: FormData;
   try {
     formData = await req.formData();
@@ -63,6 +66,7 @@ export async function POST(req: Request): Promise<Response> {
     });
 
     await insertBook({
+      userId: auth.userId,
       filename: stored,
       blobUrl: blob.url,
       blobPathname: blob.pathname,

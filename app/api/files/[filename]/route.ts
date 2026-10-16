@@ -1,6 +1,7 @@
 import { getBook, listChapters } from "@/lib/db/books";
 import { FileParams, parseOrError } from "@/lib/schemas";
 import type { TocItem } from "@/shared/api";
+import { requireUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -8,6 +9,8 @@ export async function GET(
   _req: Request,
   context: { params: Promise<{ filename: string }> },
 ): Promise<Response> {
+  const auth = await requireUser();
+  if (!auth.ok) return auth.response;
   const params = await context.params;
   const validated = parseOrError(FileParams, {
     filename: decodeURIComponent(params.filename),
@@ -17,8 +20,8 @@ export async function GET(
 
   try {
     const [book, chapters] = await Promise.all([
-      getBook(filename),
-      listChapters(filename),
+      getBook(auth.userId, filename),
+      listChapters(auth.userId, filename),
     ]);
     if (!book) {
       return Response.json({ error: "File not found" }, { status: 404 });
