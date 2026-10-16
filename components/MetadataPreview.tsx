@@ -5,6 +5,7 @@ import { ArrowRight, ArrowLeft } from "lucide-react";
 import type { Book, BookInfo } from "../types";
 import { bookGradient, bookHue, chipHueColor } from "../util/hue";
 import { FONT } from "../lib/styles";
+import { HeroSkeleton } from "./Skeleton";
 
 interface MetadataPreviewProps {
   book: Book;
@@ -50,9 +51,7 @@ function MetadataPreview({
   if (loading) {
     return (
       <section className="mx-auto max-w-page px-6 pb-32">
-        <div className="card flex items-center justify-center p-16 text-ink-3">
-          Loading book details…
-        </div>
+        <HeroSkeleton />
       </section>
     );
   }

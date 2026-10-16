@@ -8,6 +8,7 @@ import type { Book } from "@/types";
 export default function LibraryClient() {
   const router = useRouter();
   const [books, setBooks] = useState<Book[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const fetchBooks = useCallback(async (): Promise<void> => {
     try {
@@ -20,6 +21,8 @@ export default function LibraryClient() {
     } catch (error) {
       console.error("Error fetching books:", error);
       router.replace("/upload");
+    } finally {
+      setLoading(false);
     }
   }, [router]);
 
@@ -31,6 +34,7 @@ export default function LibraryClient() {
     <main>
       <LibrarySection
         books={books}
+        loading={loading}
         onBookSelect={(book) =>
           router.push(`/preview/${encodeURIComponent(book.filename)}`)
         }

@@ -12,6 +12,7 @@ import {
   findTextRanges,
   paintHighlight,
 } from "../util/textSearch";
+import { ChatSkeleton } from "./Skeleton";
 
 // Same matching rule as the in-DOM search: case-insensitive, whitespace
 // ignored. Markdown punctuation is dropped so "**foo** bar" matches "foo bar".
@@ -290,6 +291,7 @@ function ChatPanel({
 
       {/* Asks list */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-5.5 py-4.5">
+        {!activeThread && <ChatSkeleton />}
         {activeThread && asks.length === 0 && !sending && (
           <Greeting onPick={(p) => void submit(p)} />
         )}

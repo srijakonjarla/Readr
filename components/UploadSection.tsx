@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { Upload } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
 
 interface UploadSectionProps {
   onUploadSuccess: () => void;
@@ -90,7 +90,14 @@ function UploadSection({ onUploadSuccess }: UploadSectionProps) {
             disabled={uploading || !fileName}
             className="btn-cta w-full justify-center"
           >
-            {uploading ? "Uploading…" : "Upload"}
+            {uploading ? (
+              <>
+                <Loader2 size={14} className="animate-spin" /> Uploading and
+                parsing…
+              </>
+            ) : (
+              "Upload"
+            )}
           </button>
         </form>
       </div>

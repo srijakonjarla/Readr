@@ -8,6 +8,7 @@ interface UseChapterLoaderResult {
   bookInfo: BookInfo | null;
   toc: TocItem[];
   loading: boolean;
+  chapterLoading: boolean;
   currentChapterIndex: number;
   setCurrentChapterIndex: (i: number) => void;
   chapterContent: string;
@@ -19,6 +20,7 @@ export function useChapterLoader(book: Book): UseChapterLoaderResult {
   const [loading, setLoading] = useState<boolean>(true);
   const [currentChapterIndex, setCurrentChapterIndex] = useState<number>(-1);
   const [chapterContent, setChapterContent] = useState<string>("");
+  const [chapterLoading, setChapterLoading] = useState<boolean>(false);
 
   // Initial load: book metadata + TOC. Restore last-read chapter from
   // localStorage when present, else start at 0.
@@ -74,6 +76,7 @@ export function useChapterLoader(book: Book): UseChapterLoaderResult {
     const loadChapter = async (chapterId: string): Promise<void> => {
       try {
         setChapterContent("");
+        setChapterLoading(true);
         const response = await fetch(
           `/api/epub/${encodeURIComponent(book.filename)}/chapter/${encodeURIComponent(chapterId)}`,
         );
@@ -90,6 +93,8 @@ export function useChapterLoader(book: Book): UseChapterLoaderResult {
         if (!cancelled) {
           setChapterContent(`<p>Error loading chapter content: ${message}</p>`);
         }
+      } finally {
+        if (!cancelled) setChapterLoading(false);
       }
     };
     if (currentChapterIndex >= 0 && toc[currentChapterIndex]) {
@@ -108,6 +113,7 @@ export function useChapterLoader(book: Book): UseChapterLoaderResult {
     bookInfo,
     toc,
     loading,
+    chapterLoading,
     currentChapterIndex,
     setCurrentChapterIndex,
     chapterContent,

@@ -5,9 +5,11 @@ import type { Book } from "../types";
 import { headingStyle } from "../lib/styles";
 import { HeroCard } from "./library/HeroCard";
 import { BookCard } from "./library/BookCard";
+import { Bone, LibrarySkeleton } from "./Skeleton";
 
 interface LibrarySectionProps {
   books: Book[];
+  loading: boolean;
   onBookSelect: (book: Book) => void;
   onOpenBook: (book: Book) => void;
   onUploadSuccess: () => void;
@@ -25,6 +27,7 @@ const lastBookKey = "readr:lastBookFilename";
 
 function LibrarySection({
   books,
+  loading,
   onBookSelect,
   onOpenBook,
   onUploadSuccess,
@@ -98,7 +101,11 @@ function LibrarySection({
           {greetings()}
         </h1>
         <p className="mt-4 max-w-140 text-reading-size font-normal text-ink-2">
-          {books.length === 0 ? (
+          {loading ? (
+            <span role="status" className="inline-flex items-center gap-2">
+              <Bone className="inline-block h-4 w-72" />
+            </span>
+          ) : books.length === 0 ? (
             "Your shelf is empty. Upload an EPUB and settle in."
           ) : (
             <>
@@ -110,6 +117,8 @@ function LibrarySection({
           )}
         </p>
       </div>
+
+      {loading && <LibrarySkeleton />}
 
       {heroBook && <HeroCard book={heroBook} onOpen={handleOpenHero} />}
 

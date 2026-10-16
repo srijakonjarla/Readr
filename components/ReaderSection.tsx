@@ -28,6 +28,7 @@ import {
   paintHighlight,
   scrollRangeIntoView,
 } from "../util/textSearch";
+import { ProseSkeleton, ReaderSkeleton } from "./Skeleton";
 
 interface ReaderSectionProps {
   book: Book;
@@ -62,6 +63,7 @@ function ReaderSection({
     bookInfo,
     toc,
     loading,
+    chapterLoading,
     currentChapterIndex,
     setCurrentChapterIndex,
     chapterContent,
@@ -185,11 +187,7 @@ function ReaderSection({
     });
 
   if (loading) {
-    return (
-      <section className="mx-auto max-w-page px-14 py-32 text-center text-ink-3">
-        Loading book…
-      </section>
-    );
+    return <ReaderSkeleton />;
   }
 
   if (!bookInfo) {
@@ -260,6 +258,7 @@ function ReaderSection({
           )}
         </div>
 
+        {chapterLoading && <ProseSkeleton />}
         <div
           ref={bodyRef}
           className="reading-body"
