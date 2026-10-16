@@ -16,6 +16,8 @@ import {
 } from "@/lib/persistence";
 import type { Book, ChatMessage, Highlight, Thread } from "@/types";
 
+const isGeneral = (t: Thread): boolean => t.anchor === null;
+
 export default function ReaderPage({
   params,
 }: {
@@ -29,41 +31,44 @@ export default function ReaderPage({
   const [chatOpen, setChatOpen] = useState<boolean>(false);
   const [highlights, setHighlights] = useState<Highlight[]>([]);
   const [threads, setThreads] = useState<Thread[]>([]);
-  const [activeThreadId, setActiveThreadId] = useState<string>("main");
+  const [activeThreadId, setActiveThreadId] = useState<string>("");
   const [pendingPrompt, setPendingPrompt] = useState<string | null>(null);
   const [readerChapterIndex, setReaderChapterIndex] = useState<number>(-1);
 
-  // Load persisted state for this book on mount.
+  // Load persisted state for this book on mount. The General thread is the
+  // one with no anchor; thread ids are globally unique, so each book gets its
+  // own generated id rather than a shared constant.
   useEffect(() => {
     let cancelled = false;
+    const withGeneral = (loaded: Thread[]): Thread[] => {
+      const existing = loaded.find(isGeneral);
+      if (existing) {
+        return [existing, ...loaded.filter((t) => t !== existing)];
+      }
+      const general: Thread = {
+        id: `general-${crypto.randomUUID()}`,
+        title: "General",
+        anchor: null,
+        chapterIndex: null,
+        messages: [],
+      };
+      persistThread(filename, general);
+      return [general, ...loaded];
+    };
     fetchBookState(filename)
       .then((state) => {
         if (cancelled) return;
         setHighlights(state.highlights);
-        const hasMain = state.threads.some((t) => t.id === "main");
-        const mainThread: Thread = {
-          id: "main",
-          title: "General",
-          anchor: null,
-          chapterIndex: null,
-          messages: [],
-        };
-        const merged = hasMain ? state.threads : [mainThread, ...state.threads];
-        if (!hasMain) persistThread(filename, mainThread);
+        const merged = withGeneral(state.threads);
         setThreads(merged);
+        setActiveThreadId(merged[0].id);
       })
       .catch((err) => {
         if (cancelled) return;
         console.warn("Failed to load persisted state:", err);
-        const mainThread: Thread = {
-          id: "main",
-          title: "General",
-          anchor: null,
-          chapterIndex: null,
-          messages: [],
-        };
-        persistThread(filename, mainThread);
-        setThreads([mainThread]);
+        const merged = withGeneral([]);
+        setThreads(merged);
+        setActiveThreadId(merged[0].id);
       });
     return () => {
       cancelled = true;
@@ -118,14 +123,17 @@ export default function ReaderPage({
   };
 
   const removeThread = (threadId: string): void => {
-    if (threadId === "main") return;
+    const target = threads.find((t) => t.id === threadId);
+    if (!target || isGeneral(target)) return;
     setThreads((prev) => prev.filter((t) => t.id !== threadId));
     // Threads created from a highlight share id with the highlight; remove
     // both so the chapter's anchor mark goes away too.
     setHighlights((prev) => prev.filter((h) => h.id !== threadId));
     persistDeleteThread(threadId);
     persistRemoveHighlight(threadId);
-    if (activeThreadId === threadId) setActiveThreadId("main");
+    if (activeThreadId === threadId) {
+      setActiveThreadId(threads.find(isGeneral)?.id ?? "");
+    }
   };
 
   const removeLastMessage = (threadId: string): void => {

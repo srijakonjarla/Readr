@@ -22,6 +22,27 @@ export interface TocItem {
   title: string;
 }
 
+export interface BookSearchChapter {
+  chapterIndex: number;
+  chapterId: string;
+  title: string;
+  total: number;
+  /** True when the chapter is past the reader's position; matches is empty. */
+  ahead: boolean;
+  matches: {
+    occurrence: number;
+    before: string;
+    match: string;
+    after: string;
+  }[];
+}
+
+export interface BookSearchResponse {
+  query: string;
+  total: number;
+  chapters: BookSearchChapter[];
+}
+
 export interface BookInfo {
   filename: string;
   metadata?: BookMetadata;

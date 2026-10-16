@@ -30,6 +30,12 @@ const HighlightId = z
 
 export const FileParams = z.object({ filename: Filename });
 
+export const SearchQuery = z.object({
+  q: z.string().trim().min(2).max(200),
+  // Chapters after this index are "ahead": counted, but no snippet text.
+  through: z.coerce.number().int().min(-1).optional(),
+});
+
 export const ChapterParams = z.object({
   filename: Filename,
   chapterId: SafeId,

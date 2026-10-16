@@ -11,6 +11,8 @@ interface FloatingChromeProps {
   onToggleBookmark: () => void;
   onBackToLibrary: () => void;
   onShowToc: () => void;
+  onShowSearch: () => void;
+  searchOpen: boolean;
 }
 
 /**
@@ -26,6 +28,8 @@ function FloatingChrome({
   onToggleBookmark,
   onBackToLibrary,
   onShowToc,
+  onShowSearch,
+  searchOpen,
 }: FloatingChromeProps) {
   const pct = Math.round(progressFraction * 100);
   return (
@@ -38,7 +42,12 @@ function FloatingChrome({
         <button onClick={onShowToc} className="pill-btn" title="Contents">
           <List size={15} />
         </button>
-        <button className="pill-btn" title="Search" disabled>
+        <button
+          onClick={onShowSearch}
+          className={`pill-btn ${searchOpen ? "text-accent" : ""}`}
+          title="Search (/)"
+          aria-pressed={searchOpen}
+        >
           <Search size={15} />
         </button>
       </div>

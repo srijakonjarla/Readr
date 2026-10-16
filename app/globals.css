@@ -738,3 +738,22 @@ layer(base);
 .ask-answer th {
   font-weight: 600;
 }
+
+/* Book + chat search. Painted with the CSS Custom Highlight API
+   (util/textSearch.ts), so these style ranges rather than elements. */
+::highlight(search-match),
+::highlight(chat-match) {
+  background-color: color-mix(in oklab, var(--accent) 26%, transparent);
+  color: var(--ink);
+}
+::highlight(search-current) {
+  background-color: var(--accent);
+  color: white;
+}
+@utility search-snippet-mark {
+  background: color-mix(in oklab, var(--accent) 24%, transparent);
+  color: var(--ink);
+  font-weight: 600;
+  border-radius: 3px;
+  padding: 0 2px;
+}

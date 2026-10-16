@@ -1,12 +1,22 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { X, Sparkles, Send, Trash2 } from "lucide-react";
+import { X, Sparkles, Send, Trash2, Search } from "lucide-react";
 import type { Book, ChatMessage, Thread } from "../types";
 import { groupAsks } from "./chat/types";
 import { Greeting } from "./chat/Greeting";
 import { AskCard, PendingAsk } from "./chat/AskCard";
 import { useChatStream } from "./chat/useChatStream";
+import {
+  clearHighlight,
+  findTextRanges,
+  paintHighlight,
+} from "../util/textSearch";
+
+// Same matching rule as the in-DOM search: case-insensitive, whitespace
+// ignored. Markdown punctuation is dropped so "**foo** bar" matches "foo bar".
+const compact = (s: string): string =>
+  s.replace(/[\s*_`#>~]+/g, "").toLowerCase();
 
 interface ChatPanelProps {
   open: boolean;
@@ -47,6 +57,7 @@ function ChatPanel({
   currentChapterIndex,
 }: ChatPanelProps) {
   const [input, setInput] = useState<string>("");
+  const [chatQuery, setChatQuery] = useState<string>("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const activeThread =
@@ -55,6 +66,32 @@ function ChatPanel({
     () => (activeThread ? groupAsks(activeThread.messages) : []),
     [activeThread],
   );
+
+  // Keep each ask's real index: pending/regenerate only apply to the last one.
+  const needle = compact(chatQuery);
+  const visibleAsks = useMemo(
+    () =>
+      asks
+        .map((ask, index) => ({ ask, index }))
+        .filter(
+          ({ ask }) =>
+            !needle ||
+            compact(ask.question.text).includes(needle) ||
+            compact(ask.answer?.text ?? "").includes(needle),
+        ),
+    [asks, needle],
+  );
+
+  useEffect(() => {
+    const root = scrollRef.current;
+    if (!root || !open || !needle) {
+      clearHighlight("chat-match");
+      return;
+    }
+    paintHighlight("chat-match", findTextRanges(root, chatQuery));
+  }, [chatQuery, needle, visibleAsks, open]);
+
+  useEffect(() => () => clearHighlight("chat-match"), []);
 
   const { provider, setProvider, sending, submit, regenerateLast } =
     useChatStream({
@@ -125,7 +162,34 @@ function ChatPanel({
 
       {/* Toolbar (Clear) */}
       {activeThread && (
-        <div className="flex items-center justify-end gap-2 border-b border-rule-2 px-5 py-1.5">
+        <div className="flex items-center justify-between gap-3 border-b border-rule-2 px-5 py-1.5">
+          <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-full border border-rule bg-bg px-2.5 py-1 focus-within:border-accent">
+            <Search size={12} className="shrink-0 text-accent" />
+            <input
+              value={chatQuery}
+              onChange={(e) => setChatQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setChatQuery("");
+              }}
+              placeholder="Search asks…"
+              aria-label="Search asks in this context"
+              className="min-w-0 flex-1 border-none bg-transparent text-kicker text-ink outline-hidden"
+            />
+            {needle && (
+              <>
+                <span className="mono-caption shrink-0 tabular-nums">
+                  {visibleAsks.length}/{asks.length}
+                </span>
+                <button
+                  onClick={() => setChatQuery("")}
+                  className="inline-flex shrink-0 cursor-pointer text-ink-3 btn-reset"
+                  aria-label="Clear search"
+                >
+                  <X size={12} />
+                </button>
+              </>
+            )}
+          </div>
           <button
             onClick={() => {
               if (!canClear) return;
@@ -179,7 +243,7 @@ function ChatPanel({
           <span className="mono-caption whitespace-nowrap">Context</span>
           {threads.map((t) => {
             const active = t.id === activeThreadId;
-            const deletable = t.id !== "main";
+            const deletable = t.anchor !== null;
             return (
               <span
                 key={t.id}
@@ -229,13 +293,20 @@ function ChatPanel({
         {activeThread && asks.length === 0 && !sending && (
           <Greeting onPick={(p) => void submit(p)} />
         )}
-        {asks.map((ask, i) => {
+        {needle && visibleAsks.length === 0 && (
+          <p className="py-6 text-center font-serif text-meta italic text-ink-3">
+            No asks in this context mention “{chatQuery.trim()}”.
+          </p>
+        )}
+        {visibleAsks.map(({ ask, index: i }) => {
           const isLast = i === asks.length - 1;
           return (
             <AskCard
               key={i}
               ask={ask}
-              pending={isLast && sending && !ask.answer}
+              // The hook appends an empty assistant message up front, so
+              // stay pending until the first token actually lands.
+              pending={isLast && sending && !ask.answer?.text}
               onRegenerate={
                 isLast && !sending && ask.answer ? regenerateLast : undefined
               }

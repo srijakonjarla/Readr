@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { RotateCcw } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -64,16 +64,45 @@ export function PendingAsk({ text }: { text: string }) {
   );
 }
 
+// Status copy by seconds waited. The model reads every chapter so far and
+// thinks before its first token, so long books can take a while.
+const WAIT_STAGES: { after: number; text: string }[] = [
+  { after: 0, text: "Reading the chapters so far" },
+  { after: 6, text: "Thinking it through" },
+  { after: 15, text: "Still working — long books take a moment" },
+];
+
 function TypingDots() {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    const started = Date.now();
+    const id = window.setInterval(
+      () => setElapsed(Math.floor((Date.now() - started) / 1000)),
+      1000,
+    );
+    return () => window.clearInterval(id);
+  }, []);
+  const stage = [...WAIT_STAGES].reverse().find((s) => elapsed >= s.after)!;
+
   return (
-    <div className="flex items-center gap-1 py-1 text-ink-3">
-      {[0, 0.2, 0.4].map((delay) => (
-        <span
-          key={delay}
-          className="inline-block h-1.5 w-1.5 animate-dot-pulse rounded-full bg-current"
-          style={{ animationDelay: `${delay}s` }}
-        />
-      ))}
+    <div
+      className="flex items-center gap-2.5 py-1 text-ink-3"
+      role="status"
+      aria-live="polite"
+    >
+      <div className="flex items-center gap-1 text-accent">
+        {[0, 0.2, 0.4].map((delay) => (
+          <span
+            key={delay}
+            className="inline-block h-1.5 w-1.5 animate-dot-pulse rounded-full bg-current"
+            style={{ animationDelay: `${delay}s` }}
+          />
+        ))}
+      </div>
+      <span className="font-serif text-meta italic">{stage.text}…</span>
+      {elapsed >= 3 && (
+        <span className="mono-caption ml-auto tabular-nums">{elapsed}s</span>
+      )}
     </div>
   );
 }

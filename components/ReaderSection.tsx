@@ -16,11 +16,18 @@ import UpNextCard from "./reader/UpNextCard";
 import SelectionPopover from "./reader/SelectionPopover";
 import HighlightPopover from "./reader/HighlightPopover";
 import BottomProgressBar from "./reader/BottomProgressBar";
+import SearchDrawer, { type SearchJump } from "./reader/SearchDrawer";
 import { useChapterLoader } from "../hooks/useChapterLoader";
 import { useScrollProgress } from "../hooks/useScrollProgress";
 import { useTextSelection } from "../hooks/useTextSelection";
 import { useHighlightPainter } from "../hooks/useHighlightPainter";
 import { useReaderActions } from "../hooks/useReaderActions";
+import {
+  clearHighlight,
+  findTextRanges,
+  paintHighlight,
+  scrollRangeIntoView,
+} from "../util/textSearch";
 
 interface ReaderSectionProps {
   book: Book;
@@ -61,6 +68,12 @@ function ReaderSection({
   } = useChapterLoader(book);
 
   const [showToc, setShowToc] = useState<boolean>(false);
+  const [searchOpen, setSearchOpen] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [searchJump, setSearchJump] = useState<SearchJump | null>(null);
+  // Last match scrolled to, so repaints (e.g. a new highlight) don't yank
+  // the page back to it.
+  const scrolledJumpRef = useRef<SearchJump | null>(null);
   const [bookmarked, setBookmarked] = useState<boolean>(false);
   const bodyRef = useRef<HTMLDivElement>(null);
 
@@ -108,6 +121,55 @@ function ReaderSection({
     chapterContent,
   );
 
+  // Paint book-search matches in the open chapter. Runs after the highlight
+  // painter (declared above), which rewrites Text nodes on every pass — so
+  // ranges are rebuilt whenever its inputs change.
+  useEffect(() => {
+    const root = bodyRef.current;
+    if (!root || !searchOpen || searchQuery.trim().length < 2) {
+      clearHighlight("search-match");
+      clearHighlight("search-current");
+      return;
+    }
+    const ranges = findTextRanges(root, searchQuery);
+    paintHighlight("search-match", ranges);
+    const current =
+      searchJump?.chapterIndex === currentChapterIndex
+        ? ranges[searchJump.occurrence]
+        : undefined;
+    paintHighlight("search-current", current ? [current] : []);
+    if (current && scrolledJumpRef.current !== searchJump) {
+      scrolledJumpRef.current = searchJump;
+      scrollRangeIntoView(current);
+    }
+  }, [
+    searchOpen,
+    searchQuery,
+    searchJump,
+    currentChapterIndex,
+    chapterContent,
+    chapterHighlights,
+  ]);
+
+  // "/" opens search from anywhere that isn't a text field.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey) return;
+      const t = e.target as HTMLElement | null;
+      if (t?.closest("input, textarea, [contenteditable='true']")) return;
+      e.preventDefault();
+      setShowToc(false);
+      setSearchOpen(true);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const closeSearch = useCallback(() => {
+    setSearchOpen(false);
+    setSearchJump(null);
+  }, []);
+
   const { handleBodyClick, handleAsk, handleHighlight, navPrev, navNext } =
     useReaderActions({
       bodyRef,
@@ -154,7 +216,19 @@ function ReaderSection({
         bookmarked={bookmarked}
         onToggleBookmark={() => setBookmarked((b) => !b)}
         onBackToLibrary={onBackToLibrary}
-        onShowToc={() => setShowToc(true)}
+        onShowToc={() => {
+          closeSearch();
+          setShowToc(true);
+        }}
+        onShowSearch={() => {
+          if (searchOpen) {
+            closeSearch();
+          } else {
+            setShowToc(false);
+            setSearchOpen(true);
+          }
+        }}
+        searchOpen={searchOpen}
       />
 
       <LeftRailDots
@@ -261,6 +335,26 @@ function ReaderSection({
           <Sparkles size={16} />
           Ask the Companion
         </button>
+      )}
+
+      {searchOpen && (
+        <SearchDrawer
+          filename={book.filename}
+          currentChapterIndex={currentChapterIndex}
+          query={searchQuery}
+          onQueryChange={(q) => {
+            setSearchQuery(q);
+            setSearchJump(null);
+          }}
+          active={searchJump}
+          onPick={(jump) => {
+            setSearchJump(jump);
+            if (jump.chapterIndex !== currentChapterIndex) {
+              setCurrentChapterIndex(jump.chapterIndex);
+            }
+          }}
+          onClose={closeSearch}
+        />
       )}
 
       {showToc && (

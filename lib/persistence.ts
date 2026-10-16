@@ -17,6 +17,28 @@ export async function fetchBookState(filename: string): Promise<BookState> {
 
 // Fire-and-forget mutations — UI updates optimistically; persistence is best-effort.
 
+// Writes to one thread run strictly in order. Otherwise a message can reach
+// the server before its thread exists (and be rejected), or a regenerate's
+// "delete last" can land after the new reply and delete that instead.
+const threadQueues = new Map<string, Promise<void>>();
+
+function enqueue(
+  threadId: string,
+  action: string,
+  send: () => Promise<Response>,
+): void {
+  const prev = threadQueues.get(threadId) ?? Promise.resolve();
+  const next = prev.then(async () => {
+    try {
+      const res = await send();
+      if (!res.ok) log(action, `HTTP ${res.status}`);
+    } catch (e) {
+      log(action, e);
+    }
+  });
+  threadQueues.set(threadId, next);
+}
+
 export function persistHighlight(filename: string, h: Highlight): void {
   void fetch(`/api/books/${encodeURIComponent(filename)}/highlights`, {
     method: "POST",
@@ -33,44 +55,54 @@ export function persistRemoveHighlight(id: string): void {
 
 export function persistThread(filename: string, t: Thread): void {
   // Server expects { id, title, anchor, chapterIndex } — messages persisted separately
-  void fetch(`/api/books/${encodeURIComponent(filename)}/threads`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      id: t.id,
-      title: t.title,
-      anchor: t.anchor,
-      chapterIndex: t.chapterIndex,
+  enqueue(t.id, "createThread", () =>
+    fetch(`/api/books/${encodeURIComponent(filename)}/threads`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: t.id,
+        title: t.title,
+        anchor: t.anchor,
+        chapterIndex: t.chapterIndex,
+      }),
     }),
-  }).catch((e) => log("createThread", e));
+  );
 }
 
 export function persistMessage(threadId: string, msg: ChatMessage): void {
-  void fetch(`/api/threads/${encodeURIComponent(threadId)}/messages`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      role: msg.role,
-      text: msg.text,
-      anchor: msg.anchor ?? false,
+  enqueue(threadId, "appendMessage", () =>
+    fetch(`/api/threads/${encodeURIComponent(threadId)}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        role: msg.role,
+        text: msg.text,
+        anchor: msg.anchor ?? false,
+      }),
     }),
-  }).catch((e) => log("appendMessage", e));
+  );
 }
 
 export function persistClearMessages(threadId: string): void {
-  void fetch(`/api/threads/${encodeURIComponent(threadId)}/messages`, {
-    method: "DELETE",
-  }).catch((e) => log("clearMessages", e));
+  enqueue(threadId, "clearMessages", () =>
+    fetch(`/api/threads/${encodeURIComponent(threadId)}/messages`, {
+      method: "DELETE",
+    }),
+  );
 }
 
 export function persistRemoveLastMessage(threadId: string): void {
-  void fetch(`/api/threads/${encodeURIComponent(threadId)}/messages/last`, {
-    method: "DELETE",
-  }).catch((e) => log("removeLastMessage", e));
+  enqueue(threadId, "removeLastMessage", () =>
+    fetch(`/api/threads/${encodeURIComponent(threadId)}/messages/last`, {
+      method: "DELETE",
+    }),
+  );
 }
 
 export function persistDeleteThread(threadId: string): void {
-  void fetch(`/api/threads/${encodeURIComponent(threadId)}`, {
-    method: "DELETE",
-  }).catch((e) => log("deleteThread", e));
+  enqueue(threadId, "deleteThread", () =>
+    fetch(`/api/threads/${encodeURIComponent(threadId)}`, {
+      method: "DELETE",
+    }),
+  );
 }
