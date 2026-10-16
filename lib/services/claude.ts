@@ -25,10 +25,16 @@ export async function* getClaudeStream(
     truncationNote = " (Note: book context was truncated due to length.)";
   }
 
-  const stream = anthropic.messages.stream({
-    model: "claude-sonnet-4-6",
-    max_tokens: 4096,
-    thinking: { type: "disabled" },
+  // Opus 5.5 always thinks (thinking can't be disabled); effort is the depth
+  // control. `low` keeps chat replies quick. max_tokens covers thinking too.
+  // `fallbacks: "default"` reruns a safety-classifier refusal on a fallback
+  // model inside the same call.
+  const stream = anthropic.beta.messages.stream({
+    model: "claude-opus-5-5",
+    max_tokens: 16000,
+    output_config: { effort: "low" },
+    betas: ["server-side-fallback-2026-07-01"],
+    fallbacks: "default",
     system: SPOILER_SAFE_SYSTEM,
     messages: [
       {
@@ -63,9 +69,12 @@ export async function* getClaudeStream(
   // Surface usage for debugging cache/cost.
   try {
     const final = await stream.finalMessage();
+    if (final.stop_reason === "refusal") {
+      yield "\n\n[The model declined to answer this one.]";
+    }
     const u = final.usage;
     console.log(
-      `[claude.stream] usage — input: ${u.input_tokens}, cache_read: ${u.cache_read_input_tokens}, cache_create: ${u.cache_creation_input_tokens}, output: ${u.output_tokens}`,
+      `[claude.stream] usage — input: ${u.input_tokens}, cache_read: ${u.cache_read_input_tokens}, cache_create: ${u.cache_creation_input_tokens}, output: ${u.output_tokens}, model: ${final.model}`,
     );
   } catch {
     // Best-effort; finalMessage can throw if the consumer broke off early.

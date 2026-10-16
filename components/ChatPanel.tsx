@@ -162,14 +162,14 @@ function ChatPanel({
           className="nav-chip chip-mini"
           aria-pressed={provider === "openai"}
         >
-          GPT-5.4
+          GPT-5.6 Sol
         </button>
         <button
           onClick={() => setProvider("claude")}
           className="nav-chip chip-mini"
           aria-pressed={provider === "claude"}
         >
-          Claude Sonnet 4.6
+          Claude Opus 5.5
         </button>
       </div>
 

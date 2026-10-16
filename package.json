@@ -13,7 +13,7 @@
     "format:check": "prettier --check \"app/**/*.{ts,tsx,css,json}\" \"components/**/*.{ts,tsx}\" \"hooks/**/*.{ts,tsx}\" \"lib/**/*.{ts,tsx}\" \"shared/**/*.{ts,tsx}\" \"util/**/*.{ts,tsx}\" \"*.{json,md,yml,yaml,ts,tsx,mjs}\""
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.95.0",
+    "@anthropic-ai/sdk": "^0.135.0",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.105.4",
     "@vercel/blob": "^2.3.3",

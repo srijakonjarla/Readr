@@ -10,7 +10,7 @@ AI companion that respects spoiler boundaries. Deployed on Vercel.
 - **Supabase Auth** (`@supabase/ssr`) — invite-only sign-in via an `allowed_emails` table
 - **Supabase Postgres** via `postgres` (postgres.js) — books, chapters, assets, highlights, threads, messages
 - **Vercel Blob** (private) — the original uploaded `.epub` files
-- **Anthropic SDK** (Claude Sonnet 4.6) and **OpenAI SDK** (GPT-4.1-mini) — streaming responses
+- **Anthropic SDK** (Claude Opus 5.5) and **OpenAI SDK** (GPT-5.6 Sol) — streaming responses
 - **`epub` 2.x** for parsing, with a sanitizer pass on chapter HTML
 
 ## How data flows

@@ -58,11 +58,13 @@ export async function* getOpenAIStream(
   ];
 
   const stream = await openai.responses.create({
-    model: "gpt-4.1-mini",
+    // GPT-5.6 is a reasoning model: no `temperature`, and max_output_tokens
+    // covers reasoning tokens too.
+    model: "gpt-5.6-sol",
     input: userInput,
     instructions: SYSTEM_PROMPT(truncationMessage),
-    max_output_tokens: 4096,
-    temperature: 0.5,
+    max_output_tokens: 16000,
+    reasoning: { effort: "low" },
     stream: true,
   });
 
