@@ -7,7 +7,8 @@ import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "Readr — a quiet reading companion",
-  description: "Read EPUBs alongside an AI companion.",
+  description:
+    "Readr is an EPUB reader for the books you own, with highlights and a spoiler-safe AI companion that only reads the chapters you've reached.",
 };
 
 export default async function RootLayout({
