@@ -30,6 +30,7 @@ export async function POST(req: Request): Promise<Response> {
 
   // Load + spoiler-trim the book context.
   let trimmedBookJson: BookJsonData;
+  let readingPosition: string | undefined;
   try {
     const bookJsonData = await loadBookJsonFromDb(auth.userId, filename);
     const totalChapters = bookJsonData.chapters.length;
@@ -41,6 +42,12 @@ export async function POST(req: Request): Promise<Response> {
       metadata: bookJsonData.metadata,
       chapters: bookJsonData.chapters.slice(0, cutoff),
     };
+    // Tell the model which chapter the reader is on so "this chapter"
+    // resolves without asking them to name it.
+    if (typeof currentChapterIndex === "number" && cutoff > 0) {
+      const current = trimmedBookJson.chapters[cutoff - 1];
+      readingPosition = `The reader is currently on chapter ${cutoff} of ${totalChapters}: "${current.title}" (id ${current.id}). This is the last chapter in the provided JSON. When they say "this chapter", "the current chapter", or similar, they mean this one.`;
+    }
     console.log(
       `[POST /api/chat] Trimmed to ${trimmedBookJson.chapters.length}/${totalChapters} chapters.`,
     );
@@ -54,8 +61,8 @@ export async function POST(req: Request): Promise<Response> {
   const encoder = new TextEncoder();
   const tokenStream =
     provider === "claude"
-      ? getClaudeStream(trimmedBookJson, context, query)
-      : getOpenAIStream(trimmedBookJson, context, query);
+      ? getClaudeStream(trimmedBookJson, context, query, readingPosition)
+      : getOpenAIStream(trimmedBookJson, context, query, readingPosition);
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {

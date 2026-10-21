@@ -17,6 +17,7 @@ export async function* getClaudeStream(
   bookJsonData: BookJsonData,
   selectedText: string | undefined,
   query: string,
+  readingPosition?: string,
 ): AsyncIterable<string> {
   let bookContextString = JSON.stringify(bookJsonData);
   let truncationNote = "";
@@ -45,6 +46,9 @@ export async function* getClaudeStream(
             text: `Book read so far (JSON):\n\`\`\`json\n${bookContextString}\n\`\`\`${truncationNote}`,
             cache_control: { type: "ephemeral" },
           },
+          ...(readingPosition
+            ? [{ type: "text" as const, text: readingPosition }]
+            : []),
           {
             type: "text",
             text: selectedText

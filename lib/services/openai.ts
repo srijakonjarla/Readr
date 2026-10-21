@@ -35,6 +35,7 @@ export async function* getOpenAIStream(
   bookJsonData: BookJsonData,
   selectedText: string | undefined,
   query: string,
+  readingPosition?: string,
 ): AsyncIterable<string> {
   const { bookContextString, truncationMessage } = prepareContext(bookJsonData);
 
@@ -46,6 +47,9 @@ export async function* getOpenAIStream(
           type: "input_text" as const,
           text: `Book JSON:\n\`\`\`json\n${bookContextString}\n\`\`\``,
         },
+        ...(readingPosition
+          ? [{ type: "input_text" as const, text: readingPosition }]
+          : []),
         {
           type: "input_text" as const,
           text: selectedText
