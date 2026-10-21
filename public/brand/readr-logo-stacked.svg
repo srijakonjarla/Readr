@@ -1,17 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" role="img" aria-label="Readr">
-  <g transform="translate(112,24)">
-    <rect width="96" height="96" rx="18" fill="#1F1B16"></rect>
-    <rect x="15" y="24" width="30" height="48" rx="2.5" fill="#F5EFE3"></rect>
-    <rect x="51" y="24" width="30" height="48" rx="2.5" fill="#F5EFE3"></rect>
-    <rect x="19.5" y="33" width="21" height="2.25" fill="#7A6F5F"></rect>
-    <rect x="19.5" y="39" width="21" height="2.25" fill="#7A6F5F"></rect>
-    <rect x="19.5" y="45" width="15" height="2.25" fill="#7A6F5F"></rect>
-    <rect x="55.5" y="33" width="21" height="2.25" fill="#7A6F5F"></rect>
-    <rect x="55.5" y="39" width="21" height="2.25" fill="#7A6F5F"></rect>
-    <rect x="55.5" y="45" width="16.5" height="2.25" fill="#7A6F5F"></rect>
-    <rect x="63" y="21" width="4.5" height="33" fill="#C99B36"></rect>
-    <polygon points="63,54 67.5,54 65.25,58.5" fill="#C99B36"></polygon>
+  <svg x="112" y="24" width="96" height="96" viewBox="0 0 120 120">
+    <rect width="120" height="120" rx="28" fill="#8B3A1C"/>
+  <g transform="translate(3,0)">
+    <polygon points="56,60 70,60 95,98 85.5,91 78,99" fill="#D9A93E"/>
+    <path fill="#F7EFDF" fill-rule="evenodd" d="M28 24 H65 A21.5 21.5 0 0 1 65 67 H50 V88 H58 V97 H24 V88 H33 V32 H28 Z M50 34 H63 A11.5 11.5 0 0 1 63 57 H50 Z"/>
   </g>
+  </svg>
   <g transform="translate(160,0)">
     <text x="0" y="184" text-anchor="middle" font-family="&#39;Lora&#39;,&#39;Iowan Old Style&#39;,Georgia,serif" font-weight="700" font-size="56" fill="#1F1B16" letter-spacing="-1">Readr</text>
     <circle cx="83" cy="180" r="4" fill="#A07F2C"></circle>
