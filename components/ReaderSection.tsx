@@ -1,13 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  ArrowLeft,
-  ArrowRight,
-  BookOpen,
-  Highlighter,
-  Sparkles,
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
 import type { Book, Highlight } from "../types";
 import TocDrawer from "./TocDrawer";
 import FloatingChrome from "./reader/FloatingChrome";
@@ -16,18 +10,14 @@ import UpNextCard from "./reader/UpNextCard";
 import SelectionPopover from "./reader/SelectionPopover";
 import HighlightPopover from "./reader/HighlightPopover";
 import BottomProgressBar from "./reader/BottomProgressBar";
-import SearchDrawer, { type SearchJump } from "./reader/SearchDrawer";
+import SearchDrawer from "./reader/SearchDrawer";
+import ChapterHeader from "./reader/ChapterHeader";
 import { useChapterLoader } from "../hooks/useChapterLoader";
 import { useScrollProgress } from "../hooks/useScrollProgress";
 import { useTextSelection } from "../hooks/useTextSelection";
 import { useHighlightPainter } from "../hooks/useHighlightPainter";
 import { useReaderActions } from "../hooks/useReaderActions";
-import {
-  clearHighlight,
-  findTextRanges,
-  paintHighlight,
-  scrollRangeIntoView,
-} from "../util/textSearch";
+import { useBookSearch } from "../hooks/useBookSearch";
 import { ProseSkeleton, ReaderSkeleton } from "./Skeleton";
 
 interface ReaderSectionProps {
@@ -70,12 +60,6 @@ function ReaderSection({
   } = useChapterLoader(book);
 
   const [showToc, setShowToc] = useState<boolean>(false);
-  const [searchOpen, setSearchOpen] = useState<boolean>(false);
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [searchJump, setSearchJump] = useState<SearchJump | null>(null);
-  // Last match scrolled to, so repaints (e.g. a new highlight) don't yank
-  // the page back to it.
-  const scrolledJumpRef = useRef<SearchJump | null>(null);
   const [bookmarked, setBookmarked] = useState<boolean>(false);
   const bodyRef = useRef<HTMLDivElement>(null);
 
@@ -110,12 +94,6 @@ function ReaderSection({
     () => ({ __html: chapterContent }),
     [chapterContent],
   );
-  const threadCount = chapterHighlights.filter(
-    (h) => h.kind === "thread",
-  ).length;
-  const highlightCount = chapterHighlights.filter(
-    (h) => h.kind === "highlight",
-  ).length;
 
   const { popover: hlPopover, dismiss: dismissHlPopover } = useHighlightPainter(
     bodyRef,
@@ -123,54 +101,14 @@ function ReaderSection({
     chapterContent,
   );
 
-  // Paint book-search matches in the open chapter. Runs after the highlight
-  // painter (declared above), which rewrites Text nodes on every pass — so
-  // ranges are rebuilt whenever its inputs change.
-  useEffect(() => {
-    const root = bodyRef.current;
-    if (!root || !searchOpen || searchQuery.trim().length < 2) {
-      clearHighlight("search-match");
-      clearHighlight("search-current");
-      return;
-    }
-    const ranges = findTextRanges(root, searchQuery);
-    paintHighlight("search-match", ranges);
-    const current =
-      searchJump?.chapterIndex === currentChapterIndex
-        ? ranges[searchJump.occurrence]
-        : undefined;
-    paintHighlight("search-current", current ? [current] : []);
-    if (current && scrolledJumpRef.current !== searchJump) {
-      scrolledJumpRef.current = searchJump;
-      scrollRangeIntoView(current);
-    }
-  }, [
-    searchOpen,
-    searchQuery,
-    searchJump,
+  const { searchOpen, openSearch, closeSearch, drawerProps } = useBookSearch({
+    bodyRef,
     currentChapterIndex,
+    setCurrentChapterIndex,
     chapterContent,
     chapterHighlights,
-  ]);
-
-  // "/" opens search from anywhere that isn't a text field.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey) return;
-      const t = e.target as HTMLElement | null;
-      if (t?.closest("input, textarea, [contenteditable='true']")) return;
-      e.preventDefault();
-      setShowToc(false);
-      setSearchOpen(true);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
-  const closeSearch = useCallback(() => {
-    setSearchOpen(false);
-    setSearchJump(null);
-  }, []);
+    onOpen: () => setShowToc(false),
+  });
 
   const { handleBodyClick, handleAsk, handleHighlight, navPrev, navNext } =
     useReaderActions({
@@ -218,14 +156,7 @@ function ReaderSection({
           closeSearch();
           setShowToc(true);
         }}
-        onShowSearch={() => {
-          if (searchOpen) {
-            closeSearch();
-          } else {
-            setShowToc(false);
-            setSearchOpen(true);
-          }
-        }}
+        onShowSearch={searchOpen ? closeSearch : openSearch}
         searchOpen={searchOpen}
       />
 
@@ -236,27 +167,11 @@ function ReaderSection({
       />
 
       <div className="mx-auto max-w-reading pt-24 px-14 pb-36">
-        <h1 className="m-0 text-chapter font-bold tracking-[-0.035em] text-ink text-balance">
-          {chapterTitle || "Untitled chapter"}
-        </h1>
-
-        <div className="mt-10 mb-14 flex flex-wrap items-center gap-4 text-xs font-medium text-ink-3">
-          <span className="inline-flex items-center gap-1.5">
-            <BookOpen size={12} /> {bookInfo.metadata?.title || "Book"}
-          </span>
-          {highlightCount > 0 && (
-            <span className="inline-flex items-center gap-1.5">
-              <Highlighter size={12} /> {highlightCount} highlight
-              {highlightCount === 1 ? "" : "s"}
-            </span>
-          )}
-          {threadCount > 0 && (
-            <span className="inline-flex items-center gap-1.5 text-accent">
-              <Sparkles size={12} /> {threadCount} thread
-              {threadCount === 1 ? "" : "s"}
-            </span>
-          )}
-        </div>
+        <ChapterHeader
+          title={chapterTitle}
+          bookTitle={bookInfo.metadata?.title || "Book"}
+          chapterHighlights={chapterHighlights}
+        />
 
         {chapterLoading && <ProseSkeleton />}
         <div
@@ -340,19 +255,7 @@ function ReaderSection({
         <SearchDrawer
           filename={book.filename}
           currentChapterIndex={currentChapterIndex}
-          query={searchQuery}
-          onQueryChange={(q) => {
-            setSearchQuery(q);
-            setSearchJump(null);
-          }}
-          active={searchJump}
-          onPick={(jump) => {
-            setSearchJump(jump);
-            if (jump.chapterIndex !== currentChapterIndex) {
-              setCurrentChapterIndex(jump.chapterIndex);
-            }
-          }}
-          onClose={closeSearch}
+          {...drawerProps}
         />
       )}
 

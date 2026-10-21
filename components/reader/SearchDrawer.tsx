@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { EyeOff, Loader2, Search, X } from "lucide-react";
-import type { BookSearchResponse } from "../../shared/api";
+import { useSearchResults } from "../../hooks/useSearchResults";
 
 export interface SearchJump {
   chapterIndex: number;
@@ -18,9 +18,6 @@ interface SearchDrawerProps {
   onPick: (jump: SearchJump) => void;
   onClose: () => void;
 }
-
-const MIN_QUERY = 2;
-const DEBOUNCE_MS = 250;
 
 /**
  * Whole-book search. Chapters past the reader's position are counted but
@@ -38,50 +35,16 @@ function SearchDrawer({
 }: SearchDrawerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const activeRowRef = useRef<HTMLButtonElement>(null);
-  const [result, setResult] = useState<BookSearchResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { result, loading, error, ready } = useSearchResults(
+    filename,
+    query,
+    currentChapterIndex,
+  );
 
   useEffect(() => {
     inputRef.current?.focus();
     inputRef.current?.select();
   }, []);
-
-  const trimmed = query.trim();
-  useEffect(() => {
-    if (trimmed.length < MIN_QUERY) {
-      setResult(null);
-      setError(null);
-      setLoading(false);
-      return;
-    }
-    const controller = new AbortController();
-    setLoading(true);
-    const timer = window.setTimeout(async () => {
-      try {
-        const params = new URLSearchParams({
-          q: trimmed,
-          through: String(currentChapterIndex),
-        });
-        const res = await fetch(
-          `/api/books/${encodeURIComponent(filename)}/search?${params}`,
-          { signal: controller.signal },
-        );
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        setResult(await res.json());
-        setError(null);
-      } catch (e) {
-        if (controller.signal.aborted) return;
-        setError(e instanceof Error ? e.message : "Search failed");
-      } finally {
-        if (!controller.signal.aborted) setLoading(false);
-      }
-    }, DEBOUNCE_MS);
-    return () => {
-      controller.abort();
-      window.clearTimeout(timer);
-    };
-  }, [trimmed, filename, currentChapterIndex]);
 
   // Flat, in-order list of every visible match, for keyboard stepping.
   const picks = useMemo<SearchJump[]>(
@@ -168,7 +131,7 @@ function SearchDrawer({
         </div>
         <div className="mono-caption mt-2 flex items-center justify-between">
           <span>
-            {trimmed.length < MIN_QUERY
+            {!ready
               ? "Type at least 2 characters"
               : result
                 ? `${shownTotal} match${shownTotal === 1 ? "" : "es"} so far`

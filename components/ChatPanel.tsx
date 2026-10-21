@@ -1,23 +1,18 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { X, Sparkles, Send, Trash2, Search } from "lucide-react";
 import type { Book, ChatMessage, Thread } from "../types";
 import { groupAsks } from "./chat/types";
 import { Greeting } from "./chat/Greeting";
 import { AskCard, PendingAsk } from "./chat/AskCard";
 import { useChatStream } from "./chat/useChatStream";
-import {
-  clearHighlight,
-  findTextRanges,
-  paintHighlight,
-} from "../util/textSearch";
+import { useAskFilter } from "./chat/useAskFilter";
+import ChatHeader from "./chat/ChatHeader";
+import ChatToolbar from "./chat/ChatToolbar";
+import ProviderToggle from "./chat/ProviderToggle";
+import ContextTabs from "./chat/ContextTabs";
+import Composer from "./chat/Composer";
 import { ChatSkeleton } from "./Skeleton";
-
-// Same matching rule as the in-DOM search: case-insensitive, whitespace
-// ignored. Markdown punctuation is dropped so "**foo** bar" matches "foo bar".
-const compact = (s: string): string =>
-  s.replace(/[\s*_`#>~]+/g, "").toLowerCase();
 
 interface ChatPanelProps {
   open: boolean;
@@ -58,7 +53,6 @@ function ChatPanel({
   currentChapterIndex,
 }: ChatPanelProps) {
   const [input, setInput] = useState<string>("");
-  const [chatQuery, setChatQuery] = useState<string>("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const activeThread =
@@ -68,31 +62,12 @@ function ChatPanel({
     [activeThread],
   );
 
-  // Keep each ask's real index: pending/regenerate only apply to the last one.
-  const needle = compact(chatQuery);
-  const visibleAsks = useMemo(
-    () =>
-      asks
-        .map((ask, index) => ({ ask, index }))
-        .filter(
-          ({ ask }) =>
-            !needle ||
-            compact(ask.question.text).includes(needle) ||
-            compact(ask.answer?.text ?? "").includes(needle),
-        ),
-    [asks, needle],
-  );
-
-  useEffect(() => {
-    const root = scrollRef.current;
-    if (!root || !open || !needle) {
-      clearHighlight("chat-match");
-      return;
-    }
-    paintHighlight("chat-match", findTextRanges(root, chatQuery));
-  }, [chatQuery, needle, visibleAsks, open]);
-
-  useEffect(() => () => clearHighlight("chat-match"), []);
+  const {
+    query: chatQuery,
+    setQuery: setChatQuery,
+    active: filtering,
+    visibleAsks,
+  } = useAskFilter(asks, scrollRef, open);
 
   const { provider, setProvider, sending, submit, regenerateLast } =
     useChatStream({
@@ -134,151 +109,29 @@ function ChatPanel({
 
   return (
     <aside className="fixed bottom-0 right-0 top-0 z-40 flex w-lg flex-col border-l border-rule-2 bg-paper shadow-[-6px_0_28px_-18px_rgba(31,27,22,.18)]">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-rule-2 px-5.5 pb-3.5 pt-4.5">
-        <div className="flex items-center gap-2.5">
-          <span
-            className="flex h-7 w-7 items-center justify-center rounded-full text-accent"
-            style={{
-              background: "color-mix(in oklab, var(--accent) 18%, transparent)",
-            }}
-          >
-            <Sparkles size={15} strokeWidth={1.8} />
-          </span>
-          <div>
-            <div className="font-serif text-base font-semibold text-ink">
-              Companion
-            </div>
-            <div className="mono-caption">One question at a time</div>
-          </div>
-        </div>
-        <button
-          onClick={onClose}
-          className="cursor-pointer p-1 text-ink-3 btn-reset"
-          aria-label="Close"
-        >
-          <X size={18} />
-        </button>
-      </div>
+      <ChatHeader onClose={onClose} />
 
-      {/* Toolbar (Clear) */}
       {activeThread && (
-        <div className="flex items-center justify-between gap-3 border-b border-rule-2 px-5 py-1.5">
-          <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-full border border-rule bg-bg px-2.5 py-1 focus-within:border-accent">
-            <Search size={12} className="shrink-0 text-accent" />
-            <input
-              value={chatQuery}
-              onChange={(e) => setChatQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") setChatQuery("");
-              }}
-              placeholder="Search asks…"
-              aria-label="Search asks in this context"
-              className="min-w-0 flex-1 border-none bg-transparent text-kicker text-ink outline-hidden"
-            />
-            {needle && (
-              <>
-                <span className="mono-caption shrink-0 tabular-nums">
-                  {visibleAsks.length}/{asks.length}
-                </span>
-                <button
-                  onClick={() => setChatQuery("")}
-                  className="inline-flex shrink-0 cursor-pointer text-ink-3 btn-reset"
-                  aria-label="Clear search"
-                >
-                  <X size={12} />
-                </button>
-              </>
-            )}
-          </div>
-          <button
-            onClick={() => {
-              if (!canClear) return;
-              if (
-                window.confirm(
-                  "Clear all asks in this context? Anchored selection (if any) will be kept.",
-                )
-              ) {
-                onClearThread(activeThread.id);
-              }
-            }}
-            disabled={!canClear}
-            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-kicker font-medium text-ink-3 btn-reset ${
-              canClear
-                ? "cursor-pointer opacity-100"
-                : "cursor-not-allowed opacity-40"
-            }`}
-            title={
-              asks.length === 0
-                ? "Nothing to clear in this context"
-                : "Clear all asks in this context"
-            }
-          >
-            <Trash2 size={12} /> Clear
-          </button>
-        </div>
+        <ChatToolbar
+          query={chatQuery}
+          onQueryChange={setChatQuery}
+          filtering={filtering}
+          shownCount={visibleAsks.length}
+          totalCount={asks.length}
+          canClear={canClear}
+          onClear={() => onClearThread(activeThread.id)}
+        />
       )}
 
-      {/* Provider toggle */}
-      <div className="flex items-center gap-2 border-b border-rule-2 px-5 py-2 text-kicker">
-        <span className="mono-caption">Model</span>
-        <button
-          onClick={() => setProvider("openai")}
-          className="nav-chip chip-mini"
-          aria-pressed={provider === "openai"}
-        >
-          GPT-5.6 Sol
-        </button>
-        <button
-          onClick={() => setProvider("claude")}
-          className="nav-chip chip-mini"
-          aria-pressed={provider === "claude"}
-        >
-          Claude Opus 5.5
-        </button>
-      </div>
+      <ProviderToggle provider={provider} onChange={setProvider} />
 
-      {/* Context (formerly thread tabs) */}
       {threads.length > 1 && (
-        <div className="flex items-center gap-2 overflow-x-auto border-b border-rule-2 px-5 py-2">
-          <span className="mono-caption whitespace-nowrap">Context</span>
-          {threads.map((t) => {
-            const active = t.id === activeThreadId;
-            const deletable = t.anchor !== null;
-            return (
-              <span
-                key={t.id}
-                className="nav-chip inline-flex items-center gap-1 whitespace-nowrap py-1 pl-2.5 pr-1 text-kicker"
-                aria-pressed={active}
-              >
-                <button
-                  onClick={() => onSwitchThread(t.id)}
-                  className="cursor-pointer text-inherit btn-reset"
-                >
-                  {t.title}
-                </button>
-                {deletable && (
-                  <button
-                    onClick={() => {
-                      if (
-                        window.confirm(
-                          `Delete context "${t.title}"? Asks here will be lost.`,
-                        )
-                      ) {
-                        onDeleteThread(t.id);
-                      }
-                    }}
-                    aria-label={`Delete context ${t.title}`}
-                    title="Delete context"
-                    className="inline-flex cursor-pointer items-center rounded-full p-0.5 text-ink-3 opacity-70 btn-reset"
-                  >
-                    <X size={11} />
-                  </button>
-                )}
-              </span>
-            );
-          })}
-        </div>
+        <ContextTabs
+          threads={threads}
+          activeThreadId={activeThreadId}
+          onSwitch={onSwitchThread}
+          onDelete={onDeleteThread}
+        />
       )}
 
       {/* Anchor card */}
@@ -295,7 +148,7 @@ function ChatPanel({
         {activeThread && asks.length === 0 && !sending && (
           <Greeting onPick={(p) => void submit(p)} />
         )}
-        {needle && visibleAsks.length === 0 && (
+        {filtering && visibleAsks.length === 0 && (
           <p className="py-6 text-center font-serif text-meta italic text-ink-3">
             No asks in this context mention “{chatQuery.trim()}”.
           </p>
@@ -320,40 +173,12 @@ function ChatPanel({
         )}
       </div>
 
-      {/* Composer */}
-      <div className="border-t border-rule-2 bg-paper px-4.5 pb-4.5 pt-3.5">
-        <div className="flex items-end gap-2 rounded-md border border-rule bg-bg py-2 pl-3.5 pr-2">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-            rows={1}
-            placeholder="Ask one thing about what you've read…"
-            className="max-h-35 flex-1 resize-none border-none bg-transparent py-1.5 font-serif text-prose leading-normal text-ink outline-hidden"
-          />
-          <button
-            onClick={() => handleSend()}
-            disabled={!input.trim() || sending}
-            className={`inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-meta font-semibold text-white shadow-[0_4px_10px_-4px_rgba(0,0,0,.18)] transition-[opacity,filter] duration-150 btn-reset ${
-              input.trim() && !sending
-                ? "cursor-pointer opacity-100"
-                : "cursor-not-allowed opacity-50"
-            }`}
-            aria-label="Send message"
-          >
-            <Send size={14} /> Ask
-          </button>
-        </div>
-        <div className="mt-2 flex items-center gap-1.5 font-mono text-tiny uppercase tracking-[0.06em] text-ink-3">
-          <span className="h-1 w-1 rounded-full bg-accent" />
-          Each ask is independent — answers don&apos;t carry across questions
-        </div>
-      </div>
+      <Composer
+        value={input}
+        onChange={setInput}
+        onSend={() => handleSend()}
+        sending={sending}
+      />
     </aside>
   );
 }
